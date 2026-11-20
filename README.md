@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Plateforme business plans — pilote Gabon
 
-## Getting Started
+Application web qui transforme une idée en business plan fondé sur les réalités locales :
+chiffres sourcés et datés, calculs faits par un moteur déterministe, démarches officielles.
+Pilote : Libreville, Akanda, Owendo.
 
-First, run the development server:
+Le nom de la marque est provisoire : il se change dans `src/config/brand.ts` ou via
+`NEXT_PUBLIC_BRAND_NAME`.
+
+## Stack
+
+- Next.js 16 (App Router, TypeScript), Tailwind CSS 4
+- Supabase : PostgreSQL, authentification, sécurité au niveau des lignes
+- Vitest pour les tests
+- Hébergement Vercel
+
+## Démarrer en local
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local   # renseigner l'URL et la clé Supabase
+npm run dev                  # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Sans variables Supabase, le site public fonctionne et les pages privées affichent
+« Base de données en cours de raccordement ».
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Base de données
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Les migrations sont dans `supabase/migrations/`. À appliquer dans l'ordre, depuis
+l'éditeur SQL de Supabase ou avec la CLI Supabase (`supabase db push`).
 
-## Learn More
+Règles clés du schéma :
 
-To learn more about Next.js, take a look at the following resources:
+- toute table publique a la sécurité au niveau des lignes ;
+- chaque donnée de référence a une source, une date de vérification et une date d'expiration ;
+- le référentiel n'accepte que `verifie` ou `estimation` ; une estimation exige sa méthode ;
+- les projets ne sont visibles que par leur propriétaire ;
+- toute modification du référentiel est journalisée (`change_log`).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Commandes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Commande | Rôle |
+| --- | --- |
+| `npm run dev` | Serveur de développement |
+| `npm run build` | Build de production |
+| `npm test` | Tests (Vitest) |
+| `npm run lint` | Analyse ESLint |
+| `npm run typecheck` | Vérification TypeScript |
 
-## Deploy on Vercel
+## Organisation
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+src/app/            pages et actions serveur (routes en français)
+src/components/     composants d'interface
+src/config/         marque et réglages
+src/lib/            accès aux données, Supabase, validation, statuts des données
+supabase/migrations schéma SQL
+tests/              tests Vitest
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Feuille de route
+
+Phase 0 (fondations) en cours : compte, projet vide, déploiement. Ensuite : moteur financier
+(phase 1), IA et exports (phase 2), référentiel Gabon et module « Créer mon entreprise »
+(phase 3), paiement Chariow et SasPay, landing et bêta (phase 4).
