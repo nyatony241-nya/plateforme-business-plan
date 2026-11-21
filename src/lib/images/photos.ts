@@ -43,7 +43,7 @@ export function photoProvider(): "unsplash" | "pexels" | null {
 }
 
 async function searchUnsplash(query: string, key: string): Promise<PlanPhoto[]> {
-  const url = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&orientation=landscape&content_filter=high&per_page=10`;
+  const url = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&orientation=landscape&content_filter=high&per_page=20`;
   const res = await fetch(url, {
     headers: { Authorization: `Client-ID ${key}`, "Accept-Version": "v1" },
     signal: AbortSignal.timeout(8000),
@@ -66,7 +66,7 @@ async function searchUnsplash(query: string, key: string): Promise<PlanPhoto[]> 
 }
 
 async function searchPexels(query: string, key: string): Promise<PlanPhoto[]> {
-  const url = `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&orientation=landscape&per_page=10`;
+  const url = `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&orientation=landscape&per_page=20`;
   const res = await fetch(url, { headers: { Authorization: key }, signal: AbortSignal.timeout(8000), cache: "no-store" });
   if (!res.ok) throw new Error(`Pexels a répondu ${res.status}`);
   const parsed = pexelsResponse.safeParse(await res.json());
@@ -82,17 +82,20 @@ async function searchPexels(query: string, key: string): Promise<PlanPhoto[]> {
   }));
 }
 
+/** Photos paysage pour une recherche, dans l'ordre de pertinence de la banque d'images. */
+export async function searchPhotos(query: string): Promise<PlanPhoto[]> {
+  if (!query.trim()) return [];
+  const provider = photoProvider();
+  return provider === "unsplash"
+    ? searchUnsplash(query.trim(), unsplashKey()!)
+    : provider === "pexels"
+      ? searchPexels(query.trim(), pexelsKey()!)
+      : [];
+}
+
 /** Première photo paysage pour la recherche, en évitant celles déjà retenues. */
 export async function searchPhoto(query: string, exclude: Set<string>): Promise<PlanPhoto | null> {
-  if (!query.trim()) return null;
-  const provider = photoProvider();
-  const results =
-    provider === "unsplash"
-      ? await searchUnsplash(query.trim(), unsplashKey()!)
-      : provider === "pexels"
-        ? await searchPexels(query.trim(), pexelsKey()!)
-        : [];
-  return results.find((p) => !exclude.has(String(p.id))) ?? null;
+  return (await searchPhotos(query)).find((p) => !exclude.has(String(p.id))) ?? null;
 }
 
 /** Les photos doivent montrer l'Afrique : on ajoute « african » si la recherche ne le précise pas. */
@@ -101,26 +104,83 @@ export function africanize(query: string) {
   return /\b(africa|african|black)\b/i.test(q) ? q : `african ${q}`;
 }
 
+/** Ce que chaque section doit montrer, en plus du produit ou du service. */
+const SLOT_HINTS: Record<PhotoSlot, string[]> = {
+  couverture: ["shop", "store", "market", "seller", "vendor", "salon", "stall", "owner", "business", "workshop"],
+  projet: ["display", "shelf", "closeup", "close", "product", "detail", "pile", "stack", "rack"],
+  marche: ["customer", "client", "shopping", "buying", "buyer", "people", "woman", "man", "family"],
+  marketing: ["phone", "smartphone", "social", "online", "laptop", "poster", "sign", "advert", "storefront"],
+};
+const AFRICAN = ["african", "africa", "black", "gabon", "nigeria", "ghana", "kenya", "senegal", "cameroon", "congo"];
+
+const words = (text: string) =>
+  text
+    .toLowerCase()
+    .split(/[^a-z]+/)
+    .filter((w) => w.length >= 3)
+    .map((w) => w.replace(/s$/, ""));
+const sameWord = (a: string, b: string) =>
+  a === b || (Math.min(a.length, b.length) >= 4 && (a.startsWith(b) || b.startsWith(a)));
+const mentions = (text: string, list: string[]) => {
+  const w = words(text);
+  return list.some((k) => words(k).every((part) => w.some((x) => sameWord(x, part))));
+};
+
 /**
- * Une photo par emplacement, adaptée à l'Afrique en priorité ; sans résultat, on reprend la
- * recherche d'origine. Une recherche qui échoue laisse simplement l'emplacement vide.
+ * Pertinence d'une photo pour une section, d'après sa description : elle doit montrer ce que
+ * l'entreprise vend (mots-clés), si possible en Afrique et dans la scène de la section.
  */
-export async function findPlanPhotos(queries: Partial<Record<PhotoSlot, string>>) {
+export function photoScore(photo: Pick<PlanPhoto, "alt">, slot: PhotoSlot, keywords: string[]) {
+  const alt = photo.alt ?? "";
+  return (
+    (keywords.length === 0 || mentions(alt, keywords) ? 10 : 0) +
+    (mentions(alt, AFRICAN) ? 2 : 0) +
+    (mentions(alt, SLOT_HINTS[slot]) ? 3 : 0)
+  );
+}
+
+/** Meilleure photo non encore utilisée ; sans mots-clés, la première ; sinon une qui montre le produit. */
+function bestPhoto(photos: PlanPhoto[], slot: PhotoSlot, keywords: string[], used: Set<string>, requireHint = false) {
+  let best: { photo: PlanPhoto; score: number } | null = null;
+  for (const photo of photos) {
+    if (used.has(String(photo.id))) continue;
+    const score = photoScore(photo, slot, keywords);
+    if (keywords.length > 0 && score < 10 && !(requireHint && mentions(photo.alt ?? "", SLOT_HINTS[slot]))) continue;
+    if (!best || score > best.score) best = { photo, score };
+  }
+  return best?.photo ?? null;
+}
+
+/**
+ * Une photo par section, qui montre ce que l'entreprise vend : la recherche de la section
+ * (en Afrique d'abord), puis une recherche sur le produit seul. Une section sans photo
+ * pertinente reste sans photo plutôt que d'afficher une image hors sujet ; seule la section
+ * marketing accepte une scène de promotion générique (smartphone, vitrine).
+ */
+export async function findPlanPhotos(queries: Partial<Record<PhotoSlot, string>>, keywords: string[] = []) {
   const photos: Partial<Record<PhotoSlot, PlanPhoto>> = {};
   if (!photoProvider()) return photos;
   const used = new Set<string>();
+  const cache = new Map<string, Promise<PlanPhoto[]>>();
+  const search = (q: string) => {
+    if (!cache.has(q)) cache.set(q, searchPhotos(q).catch((error) => (console.error("Recherche de photo impossible", error), [])));
+    return cache.get(q)!;
+  };
+  const subject = keywords.find((k) => k.endsWith("s")) ?? keywords[0];
+
   for (const slot of PHOTO_SLOTS) {
-    const query = queries[slot];
+    const query = queries[slot]?.trim();
     if (!query) continue;
-    try {
-      const african = africanize(query);
-      const photo = (await searchPhoto(african, used)) ?? (african !== query.trim() ? await searchPhoto(query, used) : null);
-      if (photo) {
-        photos[slot] = photo;
-        used.add(String(photo.id));
-      }
-    } catch (error) {
-      console.error(`Recherche de photo impossible (${slot})`, error);
+    const attempts = [...new Set([africanize(query), query, ...(subject ? [africanize(subject), subject] : [])])];
+    let photo: PlanPhoto | null = null;
+    for (const q of attempts) {
+      photo = bestPhoto(await search(q), slot, keywords, used);
+      if (photo) break;
+    }
+    if (!photo && slot === "marketing") photo = bestPhoto(await search(africanize(query)), slot, keywords, used, true);
+    if (photo) {
+      photos[slot] = photo;
+      used.add(String(photo.id));
     }
   }
   return photos;

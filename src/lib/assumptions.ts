@@ -97,6 +97,11 @@ export const assumptionsSchema = z.object({
       generatedAt: z.string().max(40),
       summary: z.string().max(1200),
       warnings: z.array(z.string().max(400)).max(8),
+      /** Repères locaux (loyers, salaires, tarifs) fournis à l'IA, figés à la génération. */
+      references: z
+        .array(z.object({ text: z.string().max(300), source: z.string().max(200), url: z.string().max(500).optional() }))
+        .max(10)
+        .optional(),
     })
     .optional(),
 });

@@ -50,15 +50,51 @@ const aiSchema = z.object({
   conclusion: z.string().describe("Conclusion en 3 ou 4 phrases."),
   photos: z
     .object({
-      couverture: z.string(),
-      projet: z.string(),
-      marche: z.string(),
-      marketing: z.string(),
+      motsCles: z
+        .array(z.string())
+        .describe(
+          "2 à 4 mots ANGLAIS qui désignent ce que l'entreprise vend, au singulier et au pluriel. Ex. chaussettes : [\"sock\", \"socks\"] ; salon de tresses : [\"hair\", \"braids\", \"hairdresser\"] ; boulangerie : [\"bread\", \"bakery\"].",
+        ),
+      couverture: z.string().describe("L'activité en action : le vendeur ou l'artisan avec le produit, dans sa boutique, son étal ou son atelier."),
+      projet: z.string().describe("Le produit ou le service lui-même, bien visible, en gros plan."),
+      marche: z.string().describe("Des clients qui achètent ou utilisent ce produit ou ce service."),
+      marketing: z.string().describe("La promotion de ce produit : smartphone qui le montre, vitrine, affiche, publication."),
     })
     .describe(
-      "Recherches de photos libres de droit, EN ANGLAIS, 3 à 6 mots, une scène concrète et visible, qui montre l'Afrique : chaque recherche contient « african » (personnes, commerces, marchés, rues ou intérieurs africains). Exemples : « african woman selling clothes market », « african shop owner counter ». Couverture : le commerce ou l'activité en Afrique ; projet : le produit ou le service avec un vendeur africain ; marché : des clients africains ; marketing : une personne africaine avec un smartphone. Aucune marque.",
+      "Recherches de photos libres de droit, EN ANGLAIS, 3 à 6 mots, une scène concrète. Chaque recherche contient l'un des mots-clés (le produit ou le service vendu) et, sauf pour « projet », le mot « african ». Exemples pour des chaussettes : « african man selling socks shop », « colorful socks display », « african woman buying socks », « socks product photo smartphone ». Aucune marque.",
     ),
 });
+
+/** Mots-clés nettoyés et recherches qui nomment toutes le produit ou service vendu. */
+export function photoBrief(photos: {
+  motsCles: string[];
+  couverture: string;
+  projet: string;
+  marche: string;
+  marketing: string;
+}) {
+  const keywords = [
+    ...new Set(
+      photos.motsCles
+        .map((k) => k.toLowerCase().replace(/[^a-z\s-]/g, "").trim())
+        .filter((k) => k.length >= 3 && k.length <= 30),
+    ),
+  ].slice(0, 6);
+  const withSubject = (query: string) => {
+    const q = clean(query, 80);
+    if (keywords.length === 0 || keywords.some((k) => q.toLowerCase().includes(k))) return q;
+    return clean(`${keywords[0]} ${q}`, 80);
+  };
+  return {
+    photoKeywords: keywords,
+    photoQueries: {
+      couverture: withSubject(photos.couverture),
+      projet: withSubject(photos.projet),
+      marche: withSubject(photos.marche),
+      marketing: withSubject(photos.marketing),
+    },
+  };
+}
 
 export function buildDocumentInstructions() {
   return [
@@ -154,12 +190,7 @@ export async function generatePlanDocument(
     risques: out.risques.slice(0, 6).map((r) => ({ risque: clean(r.risque, 200), parade: clean(r.parade, 400) })),
     demarches: out.demarches.slice(0, 8).map((d) => clean(d, 300)).filter(Boolean),
     conclusion: prose(out.conclusion, 1200),
-    photoQueries: {
-      couverture: clean(out.photos.couverture, 80),
-      projet: clean(out.photos.projet, 80),
-      marche: clean(out.photos.marche, 80),
-      marketing: clean(out.photos.marketing, 80),
-    },
+    ...photoBrief(out.photos),
     generation: { model, generatedAt: new Date().toISOString() },
   });
   return {

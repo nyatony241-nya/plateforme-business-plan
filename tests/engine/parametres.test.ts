@@ -38,3 +38,17 @@ describe("dispense de minimum d'impôt", () => {
     expect(plan.years[1].incomeTax).toBe(500_000);
   });
 });
+
+describe("petites entreprises (impôt synthétique libératoire)", () => {
+  it("pas de minimum d'impôt sous le seuil de chiffre d'affaires", async () => {
+    const { computePlan } = await import("@/engine");
+    const { caseA, TEST_PARAMS } = await import("./fixtures");
+    const withMinimum = computePlan({ ...caseA(), params: { ...TEST_PARAMS, minimumTaxFloor: 5_000_000 } });
+    const small = computePlan({
+      ...caseA(),
+      params: { ...TEST_PARAMS, minimumTaxFloor: 5_000_000, minimumTaxExemptBelowRevenue: 1e12 },
+    });
+    expect(withMinimum.years[0].incomeTax).toBeGreaterThanOrEqual(5_000_000);
+    expect(small.years[0].incomeTax).toBeLessThan(5_000_000);
+  });
+});

@@ -131,3 +131,60 @@ describe("photos adaptées à l'Afrique", () => {
     expect(photos.couverture?.id).toBe("z9");
   });
 });
+
+describe("photos fidèles à l'activité", () => {
+  const shot = (id: string, alt: string) => ({ ...unsplashPhoto(id), alt_description: alt });
+
+  it("écarte les photos hors sujet et préfère l'Afrique et la scène de la section", async () => {
+    vi.stubEnv("UNSPLASH_ACCESS_KEY", "cle-unsplash");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          results: [
+            shot("velo", "A black and white photo of a man on a bicycle"),
+            shot("rayon", "colorful socks on a shelf"),
+            shot("client", "black woman buying socks at a market stall"),
+          ],
+        }),
+      ),
+    );
+    const photos = await findPlanPhotos({ marche: "african woman buying socks", projet: "colorful socks display" }, ["sock", "socks"]);
+    expect(photos.projet?.id).toBe("rayon");
+    expect(photos.marche?.id).toBe("client");
+  });
+
+  it("se replie sur le produit seul, sinon laisse la section sans photo", async () => {
+    vi.stubEnv("UNSPLASH_ACCESS_KEY", "cle-unsplash");
+    const fetchMock = vi.fn<(url: string) => Promise<Response>>(async (url) =>
+      Response.json({
+        results: url.endsWith("query=socks&orientation=landscape&content_filter=high&per_page=20")
+          ? [shot("seul", "pair of striped socks")]
+          : [shot("velo", "man on a bicycle"), shot("tel", "person holding a smartphone")],
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const photos = await findPlanPhotos(
+      { couverture: "african man selling socks shop", marche: "african woman buying socks", marketing: "socks smartphone" },
+      ["sock", "socks"],
+    );
+    expect(photos.couverture?.id).toBe("seul");
+    expect(photos.marche).toBeUndefined();
+    // La section marketing accepte une scène de promotion générique.
+    expect(photos.marketing?.id).toBe("tel");
+  });
+
+  it("chaque recherche nomme ce que l'entreprise vend", async () => {
+    const { photoBrief } = await import("@/lib/ai/generate-plan-document");
+    const brief = photoBrief({
+      motsCles: ["Sock", "socks", "x"],
+      couverture: "african shop owner counter",
+      projet: "colorful socks display",
+      marche: "african clients street",
+      marketing: "african person smartphone",
+    });
+    expect(brief.photoKeywords).toEqual(["sock", "socks"]);
+    expect(brief.photoQueries.couverture).toBe("sock african shop owner counter");
+    expect(brief.photoQueries.projet).toBe("colorful socks display");
+  });
+});

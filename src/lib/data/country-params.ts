@@ -1,5 +1,6 @@
 import "server-only";
 import type { CountryParams, EmployerContribution } from "@/engine";
+import type { LegalForm } from "@/lib/creation-guide";
 import type { DataStatus } from "@/lib/data-status";
 import { createClient } from "@/lib/supabase/server";
 
@@ -34,8 +35,13 @@ type Row = {
  */
 export async function getCountryParams(
   countryCode = "GA",
-  onDate: string = new Date().toISOString().slice(0, 10),
+  options: {
+    /** Forme juridique : seule l'entreprise individuelle relève de l'impôt synthétique libératoire. */
+    legalForm?: LegalForm;
+    onDate?: string;
+  } = {},
 ): Promise<{ params: CountryParams; provenance: ParamProvenance[] }> {
+  const onDate = options.onDate ?? new Date().toISOString().slice(0, 10);
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("tax_parameters")
@@ -83,6 +89,10 @@ export async function getCountryParams(
     minimumTaxExemptYears: required("minimum_dispense_annees"),
     lossCarryForwardYears: required("deficit_report_annees"),
     employerContributions,
+    // Impôt synthétique libératoire : personnes physiques (entreprise individuelle) uniquement.
+    ...(latest.has("isl_seuil_ca") && options.legalForm !== "SOCIETE"
+      ? { minimumTaxExemptBelowRevenue: latest.get("isl_seuil_ca")!.value }
+      : {}),
   };
 
   return { params, provenance: [...latest.values()] };

@@ -6,6 +6,12 @@ import { assumptionsSchema, INVESTMENT_KINDS, nextMonth, toPlanInput, type Assum
 import { checkPlanCoherence, COHERENCE } from "@/lib/coherence";
 import { DEFAULT_MODEL, resolveModel } from "@/lib/ai/model";
 import type { ParamProvenance } from "@/lib/data/country-params";
+import {
+  referenceSnapshot,
+  referenceText,
+  rentReference,
+  type LocalReference,
+} from "@/lib/local-references";
 import { budgetLabel } from "@/lib/project-options";
 
 /** Modèle utilisé pour produire les hypothèses. */
@@ -109,7 +115,26 @@ export function buildInstructions(minimumWage: number) {
   ].join("\n");
 }
 
-export function buildPrompt(ctx: ProjectContext, params: CountryParams) {
+/** Repères locaux présentés à l'IA, avec la consigne de s'y tenir. */
+export function localReferencesBlock(refs: LocalReference[], city: string | null, minimumWage: number) {
+  if (refs.length === 0) {
+    return ["Repères locaux disponibles : aucun pour l'instant. Tes chiffres seront affichés comme hypothèses à vérifier."];
+  }
+  return [
+    "Repères locaux relevés (annonces et presse, à utiliser en priorité pour ces postes) :",
+    ...refs.map((r) => `- ${referenceText(r, city)}.`),
+    "Consignes : un loyer de local commercial reste dans la fourchette relevée (prends la valeur courante sauf raison donnée par l'entrepreneur) ; " +
+      `un salaire n'est jamais inférieur au minimum légal de ${minimumWage} FCFA, même si des offres affichent moins ; ` +
+      "l'électricité se chiffre à partir du prix du kWh et d'une consommation réaliste de l'activité.",
+  ];
+}
+
+export function buildPrompt(
+  ctx: ProjectContext,
+  params: CountryParams,
+  refs: LocalReference[] = [],
+  minimumWage = 150_000,
+) {
   const lines = [
     `Projet : ${ctx.name}`,
     `Pays : ${ctx.countryName}`,
@@ -121,7 +146,7 @@ export function buildPrompt(ctx: ProjectContext, params: CountryParams) {
     `Mode d'activité : ${ctx.mode ? MODE_LABEL[ctx.mode] : "non précisé"}`,
     `Organisation : ${ctx.staffing ? STAFF_LABEL[ctx.staffing] : "non précisée"}`,
     "",
-    "Données locales vérifiées disponibles pour ce secteur et cette zone : aucune pour l'instant. Tes chiffres seront affichés comme hypothèses à vérifier.",
+    ...localReferencesBlock(refs, ctx.city, minimumWage),
     `Cadre fiscal utilisé par le moteur (pour information) : impôt sur les sociétés ${Math.round(params.corporateTaxRate * 100)} %, cotisations patronales appliquées automatiquement aux salaires.`,
     "",
     "Propose les hypothèses complètes du plan.",
@@ -157,11 +182,20 @@ const text = (value: string, max: number) => value.trim().slice(0, max);
  */
 export function normalizeAiOutput(
   out: AiOutput,
-  ctx: Pick<ProjectContext, "budget">,
+  ctx: Pick<ProjectContext, "budget"> & Partial<Pick<ProjectContext, "mode" | "city">>,
   minimumWage: number,
   meta: { model: string; generatedAt: string; startMonth: string },
+  refs: LocalReference[] = [],
 ): Assumptions {
   let n = 0;
+  const rent = ctx.mode === "local" || ctx.mode === "mixte" ? rentReference(refs) : undefined;
+  let rentRaised = false;
+  /** Un loyer de local sous le bas de la fourchette relevée est remonté à ce niveau. */
+  const plausibleRent = (label: string, monthly: number) => {
+    if (!rent?.min || !/loyer/i.test(label) || monthly <= 0 || monthly >= rent.min) return monthly;
+    rentRaised = true;
+    return rent.min;
+  };
   const id = (prefix: string) => `${prefix}-${++n}`;
   const adjusted: string[] = [];
   const kinds = new Set(INVESTMENT_KINDS.map((k) => k.value));
@@ -207,7 +241,7 @@ export function normalizeAiOutput(
       id: id("charge"),
       label: text(c.label, 120),
       note: text(c.rationale, 400),
-      monthly: clampInt(c.monthly, 0, 1e11),
+      monthly: plausibleRent(c.label, clampInt(c.monthly, 0, 1e11)),
     })),
     financing: {
       note: text(out.financing.rationale, 400),
@@ -235,11 +269,20 @@ export function normalizeAiOutput(
       generatedAt: meta.generatedAt,
       summary: text(out.summary, 1200),
       warnings: [
+        ...(rentRaised && rent
+          ? [
+              `Loyer relevé au bas des annonces observées (${referenceText(rent, ctx.city ?? null)}). Vérifiez le loyer réel du local.`.slice(
+                0,
+                400,
+              ),
+            ]
+          : []),
         ...(adjusted.length > 0
           ? [`Coût d'achat relevé à un niveau réaliste pour : ${adjusted.join(", ")}. Vérifiez vos prix fournisseurs.`.slice(0, 400)]
           : []),
         ...out.warnings.map((w) => text(w, 400)),
       ].slice(0, 8),
+      ...(refs.length > 0 ? { references: referenceSnapshot(refs, ctx.city ?? null) } : {}),
     },
   };
 
@@ -274,6 +317,7 @@ export async function generateAssumptions(
   ctx: ProjectContext,
   params: CountryParams,
   provenance: ParamProvenance[],
+  refs: LocalReference[] = [],
   model: string = ASSUMPTIONS_MODEL,
 ): Promise<GenerationResult> {
   const minimumWage = provenance.find((p) => p.code === "revenu_minimum_mensuel")?.value ?? 150_000;
@@ -288,7 +332,7 @@ export async function generateAssumptions(
     const result = await generateText({
       model: resolveModel(model),
       instructions: buildInstructions(minimumWage),
-      prompt: buildPrompt(ctx, params) + (attempt > 0 ? buildCorrectionPrompt(issues) : ""),
+      prompt: buildPrompt(ctx, params, refs, minimumWage) + (attempt > 0 ? buildCorrectionPrompt(issues) : ""),
       output: Output.object({ schema: aiOutputSchema }),
       maxRetries: 1,
       timeout: 50_000,
@@ -296,12 +340,16 @@ export async function generateAssumptions(
     usage.inputTokens += result.usage?.inputTokens ?? 0;
     usage.outputTokens += result.usage?.outputTokens ?? 0;
 
-    assumptions = normalizeAiOutput(result.output, ctx, minimumWage, {
-      model,
-      generatedAt: new Date().toISOString(),
-      startMonth: nextMonth(),
+    assumptions = normalizeAiOutput(
+      result.output,
+      ctx,
+      minimumWage,
+      { model, generatedAt: new Date().toISOString(), startMonth: nextMonth() },
+      refs,
+    );
+    issues = checkPlanCoherence(assumptions, computeScenarios(toPlanInput(assumptions, params)), ctx.budget, {
+      mode: ctx.mode,
     });
-    issues = checkPlanCoherence(assumptions, computeScenarios(toPlanInput(assumptions, params)), ctx.budget);
     if (issues.length === 0) break;
   }
 

@@ -1,3 +1,4 @@
+import { recommendLegalForm } from "@/lib/creation-guide";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -39,7 +40,7 @@ export default async function FinancialPlanPage({ params }: PageProps<"/projets/
   const project = await getMyProject(id);
   if (!project) notFound();
 
-  const [saved, country] = await Promise.all([getAssumptions(id), getCountryParams(project.country_code)]);
+  const [saved, country] = await Promise.all([getAssumptions(id), getCountryParams(project.country_code, { legalForm: recommendLegalForm(project).form })]);
   const parsed = saved ? assumptionsSchema.safeParse(saved.data) : null;
   const initial = parsed?.success ? parsed.data : null;
   const defaults = { budget: project.budget, mode: project.mode, staffing: project.staffing };
@@ -82,6 +83,30 @@ export default async function FinancialPlanPage({ params }: PageProps<"/projets/
                         <li key={w} className="flex gap-2">
                           <span aria-hidden className="text-gold">•</span>
                           {w}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+                {generation.references && generation.references.length > 0 ? (
+                  <div className="mt-4">
+                    <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-muted">
+                      Repères locaux utilisés
+                    </h2>
+                    <ul className="mt-2 flex flex-col gap-1.5 text-sm leading-relaxed text-ink-soft">
+                      {generation.references.map((r) => (
+                        <li key={r.text} className="flex gap-2">
+                          <span aria-hidden>📍</span>
+                          <span>
+                            {r.text}.{" "}
+                            {r.url ? (
+                              <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-muted underline">
+                                {r.source}
+                              </a>
+                            ) : (
+                              <span className="text-muted">{r.source}</span>
+                            )}
+                          </span>
                         </li>
                       ))}
                     </ul>

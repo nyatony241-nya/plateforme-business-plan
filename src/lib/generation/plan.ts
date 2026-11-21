@@ -1,8 +1,10 @@
 import "server-only";
+import { recommendLegalForm } from "@/lib/creation-guide";
 import { computeScenarios } from "@/engine";
 import { ASSUMPTIONS_MODEL, generateAssumptions } from "@/lib/ai/generate-assumptions";
 import { toPlanInput } from "@/lib/assumptions";
 import { getCountryParams } from "@/lib/data/country-params";
+import { getLocalReferences } from "@/lib/data/local-references";
 import {
   countMyAiRunsSince,
   logAiRun,
@@ -27,7 +29,10 @@ export async function planQuotaReached() {
  */
 export async function generateAndSavePlan(project: Project, context: ProjectContextInput): Promise<boolean> {
   await updateProjectContext(project.id, context);
-  const country = await getCountryParams(project.country_code);
+  const [country, references] = await Promise.all([
+    getCountryParams(project.country_code, { legalForm: recommendLegalForm(context).form }),
+    getLocalReferences(project.country_code, project.city?.name ?? null),
+  ]);
   const started = Date.now();
   try {
     const result = await generateAssumptions(
@@ -42,6 +47,7 @@ export async function generateAndSavePlan(project: Project, context: ProjectCont
       },
       country.params,
       country.provenance,
+      references,
     );
     // Le moteur doit pouvoir calculer ces hypothèses avant qu'on les enregistre.
     computeScenarios(toPlanInput(result.assumptions, country.params));

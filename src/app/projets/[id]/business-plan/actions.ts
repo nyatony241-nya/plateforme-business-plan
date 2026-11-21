@@ -1,5 +1,6 @@
 "use server";
 
+import { recommendLegalForm } from "@/lib/creation-guide";
 import { redirect } from "next/navigation";
 import { computeScenarios } from "@/engine";
 import { generatePlanDocument } from "@/lib/ai/generate-plan-document";
@@ -38,7 +39,7 @@ export async function writeBusinessPlan(projectId: string): Promise<FormState> {
     return { ok: false, message: `Limite de ${DAILY_LIMIT} rédactions sur 24 heures atteinte. Réessayez demain.` };
   }
 
-  const country = await getCountryParams(project.country_code);
+  const country = await getCountryParams(project.country_code, { legalForm: recommendLegalForm(project).form });
   const started = Date.now();
   try {
     const results = computeScenarios(toPlanInput(parsed.data, country.params));
@@ -57,7 +58,7 @@ export async function writeBusinessPlan(projectId: string): Promise<FormState> {
       parsed.data,
       results.realiste,
     );
-    const photos = await findPlanPhotos(out.document.photoQueries ?? {});
+    const photos = await findPlanPhotos(out.document.photoQueries ?? {}, out.document.photoKeywords ?? []);
     await upsertPlanDocument(projectId, { ...out.document, photos });
     await logAiRun({
       projectId,

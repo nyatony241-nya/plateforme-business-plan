@@ -36,6 +36,10 @@ export function validatePlanInput(input: PlanInput) {
   check(isRate(p.minimumTaxRate), "Taux du minimum d'impôt invalide.");
   check(isMoney(p.minimumTaxFloor), "Plancher du minimum d'impôt invalide.");
   check(Number.isInteger(p.minimumTaxExemptYears) && p.minimumTaxExemptYears >= 0, "Dispense de minimum d'impôt invalide.");
+  check(
+    p.minimumTaxExemptBelowRevenue === undefined || isMoney(p.minimumTaxExemptBelowRevenue),
+    "Seuil des petites entreprises invalide.",
+  );
   for (const c of p.employerContributions) {
     check(isRate(c.rate), `Cotisation « ${c.label} » : taux invalide.`);
     check(c.monthlyCeiling === null || c.monthlyCeiling > 0, `Cotisation « ${c.label} » : plafond invalide.`);
@@ -190,8 +194,12 @@ export function computePlan(input: PlanInput, scenario: ScenarioId = "realiste")
         taxable -= used;
       }
     }
+    const smallBusiness =
+      p.minimumTaxExemptBelowRevenue !== undefined && yearRevenue < p.minimumTaxExemptBelowRevenue;
     const minimumTax =
-      year <= p.minimumTaxExemptYears ? 0 : Math.max(yearRevenue * p.minimumTaxRate, p.minimumTaxFloor);
+      year <= p.minimumTaxExemptYears || smallBusiness
+        ? 0
+        : Math.max(yearRevenue * p.minimumTaxRate, p.minimumTaxFloor);
     incomeTax[year * 12] = roundXaf(Math.max(taxable * p.corporateTaxRate, minimumTax));
   }
 
