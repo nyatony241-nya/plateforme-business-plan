@@ -54,6 +54,22 @@ export default async function FinancialPlanPage({ params }: PageProps<"/projets/
           ← {project.name}
         </Link>
         <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight text-ink">Plan financier</h1>
+        {initial && saved ? (
+          <details className="mt-4 max-w-4xl">
+            <summary className="inline-flex cursor-pointer list-none items-center gap-2 rounded-xl bg-forest px-5 py-3 text-[0.95rem] font-semibold text-white [&::-webkit-details-marker]:hidden">
+              <span aria-hidden>🔄</span> Regénérer le plan
+            </summary>
+            <div className="mt-4 rounded-2xl border border-forest/30 bg-forest-50 p-5">
+              <p className="text-sm text-ink-soft">
+                Tous les chiffres sont recalculés avec les dernières règles et les repères locaux. Vos corrections
+                actuelles seront remplacées.
+              </p>
+              <div className="mt-4">
+                <GenerateForm projectId={id} defaults={defaults} submitLabel="Regénérer le plan" />
+              </div>
+            </div>
+          </details>
+        ) : null}
 
         {!initial || !saved ? (
           <section className="mt-6 max-w-4xl rounded-2xl border border-forest/30 bg-forest-50 p-6">
@@ -112,15 +128,6 @@ export default async function FinancialPlanPage({ params }: PageProps<"/projets/
                     </ul>
                   </div>
                 ) : null}
-                <details className="mt-5 border-t border-line pt-4">
-                  <summary className="cursor-pointer text-sm font-semibold text-forest">Regénérer le plan</summary>
-                  <p className="mt-2 text-sm text-ink-soft">
-                    Les hypothèses actuelles, y compris vos corrections, seront remplacées.
-                  </p>
-                  <div className="mt-4">
-                    <GenerateForm projectId={id} defaults={defaults} submitLabel="Regénérer le plan" />
-                  </div>
-                </details>
               </section>
             ) : null}
             <div className="mt-8">
