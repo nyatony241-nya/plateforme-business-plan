@@ -2,6 +2,7 @@ import { computeScenarios } from "@/engine";
 import { generateAssumptions } from "@/lib/ai/generate-assumptions";
 import { toPlanInput } from "@/lib/assumptions";
 import { checkPlanCoherence } from "@/lib/coherence";
+import { getLocalReferences } from "@/lib/data/local-references";
 
 export const maxDuration = 120;
 
@@ -15,12 +16,13 @@ export async function GET(request: Request) {
     lossCarryForwardYears: 5,
   };
   const ctx = {
-    name: q.get("nom") ?? "tchock's", countryName: "Gabon", city: "Libreville", district: "akanda",
+    name: q.get("nom") ?? "tchock's", countryName: "Gabon", city: q.get("ville") ?? "Akanda", district: null,
     sector: q.get("secteur") ?? "pret a porter", idea: q.get("idee") ?? "boutique de vente de chaussettes de marques",
-    budget: Number(q.get("budget") ?? 500_000), mode: (q.get("mode") ?? "en_ligne") as "en_ligne", staffing: (q.get("staff") ?? "seul") as "seul",
+    budget: Number(q.get("budget") ?? 500_000), mode: (q.get("mode") ?? "en_ligne") as "en_ligne" | "local" | "mixte", staffing: (q.get("staff") ?? "seul") as "seul" | "recruter",
   };
   try {
-    const result = await generateAssumptions(ctx, params, []);
+    const refs = await getLocalReferences("GA", ctx.city);
+    const result = await generateAssumptions(ctx, params, [], refs);
     const plan = computeScenarios(toPlanInput(result.assumptions, params));
     const y = plan.realiste.years[0];
     return Response.json({
@@ -29,7 +31,9 @@ export async function GET(request: Request) {
       offres: result.assumptions.offers.map((o) => ({ label: o.label, nature: o.nature, prix: o.unitPrice, cout: o.unitCost, part: Math.round((o.unitCost / o.unitPrice) * 100) + " %", volume: o.monthlyVolume })),
       charges: result.assumptions.fixedCosts.map((c) => `${c.label}: ${c.monthly}`),
       an1: { ventes: y.revenue, benefice: y.netResult, marge: Math.round((y.netResult / y.revenue) * 100) + " %" },
-      controleFinal: checkPlanCoherence(result.assumptions, plan, ctx.budget),
+      controleFinal: checkPlanCoherence(result.assumptions, plan, ctx.budget, { mode: ctx.mode }),
+      reperes: result.assumptions.generation?.references,
+      personnel: result.assumptions.staff.map((s) => `${s.label}: ${s.monthlyGross}`),
       avertissements: result.assumptions.generation?.warnings,
     });
   } catch (error) {
