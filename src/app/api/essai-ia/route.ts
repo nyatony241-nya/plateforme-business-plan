@@ -5,7 +5,8 @@ import { toPlanInput } from "@/lib/assumptions";
 export const maxDuration = 120;
 
 // Route d'essai, uniquement sur les déploiements de prévisualisation.
-export async function GET() {
+export async function GET(request: Request) {
+  const model = new URL(request.url).searchParams.get("model") ?? undefined;
   if (process.env.VERCEL_ENV !== "preview") return new Response("Introuvable", { status: 404 });
   const params = {
     currency: "XAF" as const,
@@ -31,9 +32,11 @@ export async function GET() {
       },
       params,
       [],
+      model,
     );
     const plan = computeScenarios(toPlanInput(result.assumptions, params));
     return Response.json({
+      model: result.assumptions.generation?.model,
       durationMs: result.durationMs,
       usage: result.usage,
       assumptions: result.assumptions,

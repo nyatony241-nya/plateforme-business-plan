@@ -6,8 +6,8 @@ import { assumptionsSchema, INVESTMENT_KINDS, nextMonth, type Assumptions } from
 import type { ParamProvenance } from "@/lib/data/country-params";
 import { budgetLabel } from "@/lib/project-options";
 
-/** Modèle utilisé pour produire les hypothèses (via Vercel AI Gateway). */
-export const ASSUMPTIONS_MODEL = "anthropic/claude-sonnet-5.5";
+/** Modèle utilisé pour produire les hypothèses (via Vercel AI Gateway), réglable sans redéploiement de code. */
+export const ASSUMPTIONS_MODEL = process.env.AI_MODEL_HYPOTHESES?.trim() || "anthropic/claude-sonnet-5.5";
 
 export type ProjectContext = {
   name: string;
@@ -227,11 +227,12 @@ export async function generateAssumptions(
   ctx: ProjectContext,
   params: CountryParams,
   provenance: ParamProvenance[],
+  model: string = ASSUMPTIONS_MODEL,
 ): Promise<GenerationResult> {
   const minimumWage = provenance.find((p) => p.code === "revenu_minimum_mensuel")?.value ?? 150_000;
   const started = Date.now();
   const result = await generateText({
-    model: ASSUMPTIONS_MODEL,
+    model,
     instructions: buildInstructions(minimumWage),
     prompt: buildPrompt(ctx, params),
     output: Output.object({ schema: aiOutputSchema }),
@@ -240,7 +241,7 @@ export async function generateAssumptions(
   });
 
   const assumptions = normalizeAiOutput(result.output, ctx, minimumWage, {
-    model: ASSUMPTIONS_MODEL,
+    model,
     generatedAt: new Date().toISOString(),
     startMonth: nextMonth(),
   });
