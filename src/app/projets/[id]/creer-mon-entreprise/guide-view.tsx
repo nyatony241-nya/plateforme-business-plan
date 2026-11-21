@@ -219,7 +219,8 @@ export function CreationGuideView({ project, guide, provenance, revenue1 }: Crea
                     ) : (
                       isl.source.title
                     )}
-                    , vérifié le {formatDateFr(isl.verifiedAt)}. À confirmer auprès de votre centre des impôts.
+                    , vérifié le {formatDateFr(isl.verifiedAt)}.
+                    {isl.status === "verifie" ? "" : " À confirmer auprès de votre centre des impôts."}
                   </p>
                 </div>
               ) : null}
