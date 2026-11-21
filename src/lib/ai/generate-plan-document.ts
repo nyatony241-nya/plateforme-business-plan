@@ -57,7 +57,9 @@ export function buildDocumentInstructions() {
     "- N'écris AUCUN montant, prix, pourcentage ni chiffre financier dans le texte : les tableaux chiffrés sont produits séparément par un moteur de calcul. Seules exceptions : les parts du budget marketing et les notes des critères, dans leurs champs dédiés.",
     "- N'invente ni statistique, ni étude, ni source, ni nom d'entreprise, de marque ou de concurrent. Seul organisme cité : l'ANPI-Gabon, guichet unique de création d'entreprise.",
     "- Pour les démarches, n'indique ni frais, ni délais, ni adresse, ni téléphone : ils seront vérifiés séparément.",
-    "- Ce que tu ne sais pas avec certitude est présenté comme à vérifier sur le terrain.",
+    "- Ce que tu ne sais pas avec certitude est présenté comme à vérifier sur le terrain. N'affirme pas l'absence de concurrents ni la sécurité d'un quartier : tu ne les connais pas.",
+    "- Emplacement : chaque note est une appréciation a priori ; chaque commentaire dit ce qu'il faut vérifier sur place.",
+    "- Sépare les paragraphes par un saut de ligne.",
     "- Phrases courtes, pas de jargon, pas d'emphase publicitaire.",
   ].join("\n");
 }
@@ -91,6 +93,8 @@ export function buildDocumentPrompt(ctx: ProjectContext, a: Assumptions, realist
 }
 
 const clean = (value: string, max: number) => value.trim().slice(0, max);
+/** Texte en paragraphes : rétablit un saut de ligne oublié entre deux phrases collées (« cadeaux.Le projet »). */
+export const prose = (value: string, max: number) => clean(value.replace(/([a-zà-ÿ][.!?])(?=[A-ZÀ-Ý])/g, "$1\n"), max);
 
 /** Appelle l'IA et renvoie un document validé (bornes, notes 1 à 5, parts entières). */
 export async function generatePlanDocument(
@@ -110,15 +114,15 @@ export async function generatePlanDocument(
   });
   const out = result.output;
   const document: PlanDocument = planDocumentSchema.parse({
-    resume: clean(out.resume, 1500),
-    projet: clean(out.projet, 2000),
+    resume: prose(out.resume, 1500),
+    projet: prose(out.projet, 2000),
     marche: {
-      clientele: clean(out.marche.clientele, 1500),
-      concurrence: clean(out.marche.concurrence, 1500),
-      tendances: clean(out.marche.tendances, 1500),
+      clientele: prose(out.marche.clientele, 1500),
+      concurrence: prose(out.marche.concurrence, 1500),
+      tendances: prose(out.marche.tendances, 1500),
     },
     emplacement: {
-      analyse: clean(out.emplacement.analyse, 1500),
+      analyse: prose(out.emplacement.analyse, 1500),
       criteres: out.emplacement.criteres.slice(0, 6).map((c) => ({
         critere: clean(c.critere, 80),
         note: Math.min(5, Math.max(1, Math.round(c.note))),
@@ -139,7 +143,7 @@ export async function generatePlanDocument(
     },
     risques: out.risques.slice(0, 6).map((r) => ({ risque: clean(r.risque, 200), parade: clean(r.parade, 400) })),
     demarches: out.demarches.slice(0, 8).map((d) => clean(d, 300)).filter(Boolean),
-    conclusion: clean(out.conclusion, 1200),
+    conclusion: prose(out.conclusion, 1200),
     generation: { model, generatedAt: new Date().toISOString() },
   });
   return {

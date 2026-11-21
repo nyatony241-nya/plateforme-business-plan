@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { computeScenarios } from "@/engine";
-import { buildDocumentInstructions, buildDocumentPrompt } from "@/lib/ai/generate-plan-document";
+import { buildDocumentInstructions, buildDocumentPrompt, prose } from "@/lib/ai/generate-plan-document";
 import { defaultAssumptions, toPlanInput, type Assumptions } from "@/lib/assumptions";
 import { monthlyMarketingBudget, splitBudget } from "@/lib/business-plan";
 import { TEST_PARAMS } from "./engine/fixtures";
@@ -61,5 +61,12 @@ describe("consignes de rédaction", () => {
     expect(prompt).toContain("Akanda, Libreville, Gabon");
     expect(prompt).toContain("Paire de chaussettes");
     expect(prompt).not.toMatch(/\d{3}\s?000/);
+  });
+});
+
+describe("mise en paragraphes", () => {
+  it("sépare deux phrases collées sans toucher aux sigles", () => {
+    expect(prose("des cadeaux.Le projet", 100)).toBe("des cadeaux.\nLe projet");
+    expect(prose("une S.A.R.L. Elle vend", 100)).toBe("une S.A.R.L. Elle vend");
   });
 });

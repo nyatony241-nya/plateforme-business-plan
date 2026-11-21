@@ -16,8 +16,8 @@ type Props = {
 
 function Section({ n, title, children }: { n: number; title: string; children: ReactNode }) {
   return (
-    <section className="mt-10 break-inside-avoid-page print:mt-8">
-      <h2 className="font-display text-2xl font-semibold text-ink">
+    <section className="mt-10 print:mt-8">
+      <h2 className="break-after-avoid font-display text-2xl font-semibold text-ink">
         <span className="mr-2 text-gold">{n}.</span>
         {title}
       </h2>
@@ -41,7 +41,7 @@ function Paragraphs({ text }: { text: string }) {
 
 function Sub({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div>
+    <div className="break-inside-avoid">
       <h3 className="font-semibold text-ink">{title}</h3>
       <div className="mt-1 text-ink-soft">{children}</div>
     </div>

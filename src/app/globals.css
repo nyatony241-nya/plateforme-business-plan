@@ -55,7 +55,7 @@ body {
 @media print {
   html,
   body {
-    background: #fff;
+    background: #fff !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
