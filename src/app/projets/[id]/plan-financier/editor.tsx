@@ -387,8 +387,8 @@ export function PlanEditor({
         </div>
       </details>
 
-        <details className="rounded-2xl border border-line bg-surface p-5 sm:p-6">
-          <summary className="cursor-pointer font-display text-xl font-semibold text-ink">
+        <details className="rounded-2xl border border-line bg-surface px-5 py-4">
+          <summary className="cursor-pointer text-sm font-semibold text-forest">
             Impôts et cotisations appliqués (Gabon)
           </summary>
           <p className="mt-2 text-sm text-ink-soft">
@@ -428,7 +428,7 @@ export function PlanEditor({
           className="fixed inset-x-3 bottom-3 z-20 mx-auto flex max-w-3xl items-center justify-between gap-3 rounded-2xl bg-forest px-4 py-3 text-white shadow-lg"
         >
           <span className="text-sm">
-            Résultat net an 1
+            Bénéfice la 1re année
             <span className="block text-base font-bold tabular-nums">
               {formatXaf(computed.results[scenario].years[0].netResult)}
             </span>
