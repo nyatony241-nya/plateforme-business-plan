@@ -38,6 +38,26 @@ Règles clés du schéma :
 - les projets ne sont visibles que par leur propriétaire ;
 - toute modification du référentiel est journalisée (`change_log`).
 
+## Moteur financier (`src/engine`)
+
+Module TypeScript pur, sans IA ni réseau : mêmes hypothèses, mêmes chiffres, dans le
+navigateur comme sur le serveur. Entrée : `PlanInput` (investissements, offres, personnel,
+charges fixes, financement, délais de paiement, paramètres fiscaux du pays). Sortie :
+`PlanResult` (mois par mois, synthèse annuelle, plan de financement, indicateurs).
+
+- Montants en francs CFA entiers, hors taxes ; chaque ligne mensuelle est arrondie une fois,
+  les totaux sont des sommes de lignes.
+- Impôt annuel = max(IS sur le bénéfice après déficits reportables, minimum d'impôt),
+  enregistré et payé au 12e mois de chaque exercice.
+- Frais de création en charge du premier mois ; caution et stock initial non amortis.
+- Emprunts à mensualités constantes, différé partiel possible.
+- Scénarios prudent / réaliste / optimiste : coefficients appliqués aux mêmes hypothèses.
+- Les taux fiscaux ne sont jamais codés en dur : ils viennent du référentiel, avec leur source.
+  Ceux des tests sont fictifs.
+
+Simplifications assumées de la version 1 : TVA hors du compte de résultat, besoin en fonds de
+roulement estimé sur le mois en cours, impôt payé dans le mois de clôture.
+
 ## Commandes
 
 | Commande | Rôle |
