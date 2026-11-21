@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
 import { ConfigNotice } from "@/components/config-notice";
-import { ButtonLink } from "@/components/ui";
+import { ButtonLink, buttonClass } from "@/components/ui";
 import { computeScenarios } from "@/engine";
 import { assumptionsSchema, toPlanInput } from "@/lib/assumptions";
 import { planDocumentSchema } from "@/lib/business-plan";
@@ -83,8 +83,13 @@ export default async function BusinessPlanPage({ params }: PageProps<"/projets/[
         ) : (
           <>
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
-              <p className="text-sm text-muted">Dans la fenêtre qui s&apos;ouvre, choisissez « Enregistrer en PDF ».</p>
-              <PrintButton />
+              <p className="text-sm text-muted">Pour le PDF, choisissez « Enregistrer en PDF » dans la fenêtre qui s&apos;ouvre.</p>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <PrintButton />
+                <a href={`/projets/${id}/business-plan/word`} className={buttonClass("secondary")} download>
+                  Télécharger en Word
+                </a>
+              </div>
             </div>
             <div className="mt-6 print:mt-0">
               <PlanDocumentView

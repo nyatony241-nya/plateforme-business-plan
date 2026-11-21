@@ -1,0 +1,99 @@
+import { SCENARIO_LABEL, type PlanResult, type ScenarioId } from "@/engine";
+import { INVESTMENT_KINDS, type Assumptions } from "@/lib/assumptions";
+import { monthlyMarketingBudget, splitBudget, type PlanDocument } from "@/lib/business-plan";
+import { formatDateFr } from "@/lib/data-status";
+import { formatMonth, formatXaf } from "@/lib/format";
+import { ownerIncome } from "@/lib/owner-income";
+
+export type PlanViewInput = {
+  doc: PlanDocument;
+  a: Assumptions;
+  results: Record<ScenarioId, PlanResult>;
+  project: { name: string; sector: string | null; district: string | null; city: string | null; country: string };
+  minimumWage: number;
+};
+
+/**
+ * Tout ce que le business plan affiche, déjà calculé et mis en forme.
+ * Utilisé à l'identique par la page (et donc le PDF) et par l'export Word.
+ */
+export function buildPlanView({ doc, a, results, project, minimumWage }: PlanViewInput) {
+  const r = results.realiste;
+  const kind = (k: string) => INVESTMENT_KINDS.find((x) => x.value === k)?.label ?? k;
+  const budget = monthlyMarketingBudget(a);
+  const amounts = splitBudget(budget, doc.marketing.canaux);
+  const be = r.indicators.breakEvenMonth;
+  const pay = a.staff.length === 0 ? ownerIncome(r.years, minimumWage)[0] : null;
+  const res = r.financing.resources;
+
+  const financing = [
+    `Argent nécessaire au départ, y compris les premiers mois d'activité : ${formatXaf(r.financing.totalNeed)}.`,
+    `Financement prévu : ${formatXaf(res.total)} (apport ${formatXaf(res.equity)}${
+      res.loans > 0 ? `, prêts ${formatXaf(res.loans)}` : ""
+    }${res.grants > 0 ? `, aides ${formatXaf(res.grants)}` : ""}).`,
+  ].join(" ");
+
+  const outlook = [
+    be
+      ? `Dans le scénario réaliste, l'activité devient rentable en ${formatMonth(r.months[be - 1].month)}.`
+      : "Dans le scénario réaliste, l'activité n'atteint pas la rentabilité sur la période étudiée.",
+    pay
+      ? pay.loss
+        ? "La première année est en perte : l'entrepreneur ne pourra pas se verser de salaire."
+        : `Travaillant seul, l'entrepreneur pourra se verser environ ${formatXaf(
+            Math.round(pay.monthly / 1000) * 1000,
+          )} par mois la première année.`
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return {
+    title: project.name,
+    subtitle: [project.sector, [project.district, project.city, project.country].filter(Boolean).join(", ")]
+      .filter(Boolean)
+      .join(" · "),
+    dateLine: `Document établi le ${formatDateFr(doc.generation.generatedAt)}`,
+    offers: a.offers.map((o) => `${o.label} — ${formatXaf(o.unitPrice)}`),
+    investments: a.investments.map((inv) => ({ label: inv.label, kind: kind(inv.kind), amount: formatXaf(inv.amount) })),
+    investmentsTotal: formatXaf(r.financing.investmentsTotal),
+    financing,
+    shortfall:
+      r.financing.shortfall > 0
+        ? `Il manque ${formatXaf(r.financing.shortfall)} pour passer le mois le plus difficile.`
+        : null,
+    forecastTitle: `Prévisions sur ${r.years.length} ans (scénario réaliste)`,
+    forecastYears: r.years.map((y) => `An ${y.year}`),
+    forecastRows: (
+      [
+        ["Ventes", "revenue"],
+        ["Bénéfice", "netResult"],
+        ["Argent en caisse en fin d'année", "cashEnd"],
+      ] as const
+    ).map(([label, key]) => ({ label, values: r.years.map((y) => formatXaf(y[key])) })),
+    scenarios: (["prudent", "realiste", "optimiste"] as const).map((id) => ({
+      label: SCENARIO_LABEL[id],
+      revenue: formatXaf(results[id].years[0].revenue),
+      net: formatXaf(results[id].years[0].netResult),
+    })),
+    outlook,
+    marketing: doc.marketing.canaux.map((c, i) => ({
+      canal: c.canal,
+      action: c.action,
+      budget: budget > 0 ? formatXaf(amounts[i]) : "—",
+    })),
+    marketingWithoutBudget: budget === 0,
+    footer:
+      "Les chiffres de ce document sont des hypothèses proposées automatiquement puis calculées par un moteur financier ; ils ne proviennent pas d'une étude de terrain et doivent être vérifiés. Montants en francs CFA, hors taxes.",
+  };
+}
+
+export type PlanView = ReturnType<typeof buildPlanView>;
+
+/** Découpe un texte rédigé en paragraphes. */
+export function paragraphs(text: string) {
+  return text
+    .split(/\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+}

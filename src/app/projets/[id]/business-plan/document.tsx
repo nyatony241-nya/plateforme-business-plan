@@ -1,18 +1,5 @@
 import type { ReactNode } from "react";
-import { SCENARIO_LABEL, type PlanResult, type ScenarioId } from "@/engine";
-import { INVESTMENT_KINDS, type Assumptions } from "@/lib/assumptions";
-import { monthlyMarketingBudget, splitBudget, type PlanDocument } from "@/lib/business-plan";
-import { formatDateFr } from "@/lib/data-status";
-import { formatMonth, formatXaf } from "@/lib/format";
-import { ownerIncome } from "@/lib/owner-income";
-
-type Props = {
-  doc: PlanDocument;
-  a: Assumptions;
-  results: Record<ScenarioId, PlanResult>;
-  project: { name: string; sector: string | null; district: string | null; city: string | null; country: string };
-  minimumWage: number;
-};
+import { buildPlanView, paragraphs, type PlanViewInput } from "@/lib/business-plan-view";
 
 function Section({ n, title, children }: { n: number; title: string; children: ReactNode }) {
   return (
@@ -29,12 +16,9 @@ function Section({ n, title, children }: { n: number; title: string; children: R
 function Paragraphs({ text }: { text: string }) {
   return (
     <>
-      {text
-        .split(/\n+/)
-        .filter((p) => p.trim())
-        .map((p, i) => (
-          <p key={i}>{p}</p>
-        ))}
+      {paragraphs(text).map((p, i) => (
+        <p key={i}>{p}</p>
+      ))}
     </>
   );
 }
@@ -60,22 +44,17 @@ function Table({ children }: { children: ReactNode }) {
   );
 }
 
-export function PlanDocumentView({ doc, a, results, project, minimumWage }: Props) {
-  const r = results.realiste;
-  const kind = (k: string) => INVESTMENT_KINDS.find((x) => x.value === k)?.label ?? k;
-  const budget = monthlyMarketingBudget(a);
-  const amounts = splitBudget(budget, doc.marketing.canaux);
-  const be = r.indicators.breakEvenMonth;
-  const pay = a.staff.length === 0 ? ownerIncome(r.years, minimumWage)[0] : null;
-  const place = [project.district, project.city, project.country].filter(Boolean).join(", ");
+export function PlanDocumentView(input: PlanViewInput) {
+  const { doc } = input;
+  const v = buildPlanView(input);
 
   return (
     <article className="rounded-2xl border border-line bg-surface p-6 sm:p-10 print:rounded-none print:border-0 print:p-0">
       <header className="border-b border-line pb-8">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gold">Business plan</p>
-        <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight text-ink sm:text-5xl">{project.name}</h1>
-        <p className="mt-3 text-lg text-ink-soft">{[project.sector, place].filter(Boolean).join(" · ")}</p>
-        <p className="mt-2 text-sm text-muted">Document établi le {formatDateFr(doc.generation.generatedAt)}</p>
+        <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight text-ink sm:text-5xl">{v.title}</h1>
+        <p className="mt-3 text-lg text-ink-soft">{v.subtitle}</p>
+        <p className="mt-2 text-sm text-muted">{v.dateLine}</p>
       </header>
 
       <Section n={1} title="Résumé">
@@ -86,10 +65,8 @@ export function PlanDocumentView({ doc, a, results, project, minimumWage }: Prop
         <Paragraphs text={doc.projet} />
         <Sub title="Ce que nous vendons">
           <ul className="list-disc pl-5">
-            {a.offers.map((o) => (
-              <li key={o.id}>
-                {o.label} — {formatXaf(o.unitPrice)}
-              </li>
+            {v.offers.map((o) => (
+              <li key={o}>{o}</li>
             ))}
           </ul>
         </Sub>
@@ -136,61 +113,44 @@ export function PlanDocumentView({ doc, a, results, project, minimumWage }: Prop
         <Sub title="Investissements de départ">
           <Table>
             <tbody>
-              {a.investments.map((inv) => (
-                <tr key={inv.id} className="border-b border-line/70">
+              {v.investments.map((inv) => (
+                <tr key={inv.label} className="border-b border-line/70">
                   <td className={td}>
-                    {inv.label} <span className="text-muted">· {kind(inv.kind)}</span>
+                    {inv.label} <span className="text-muted">· {inv.kind}</span>
                   </td>
-                  <td className={num}>{formatXaf(inv.amount)}</td>
+                  <td className={num}>{inv.amount}</td>
                 </tr>
               ))}
               <tr className="font-semibold">
                 <td className={td}>Total</td>
-                <td className={num}>{formatXaf(r.financing.investmentsTotal)}</td>
+                <td className={num}>{v.investmentsTotal}</td>
               </tr>
             </tbody>
           </Table>
         </Sub>
         <Sub title="Financement">
-          <p>
-            Argent nécessaire au départ, y compris les premiers mois d&apos;activité :{" "}
-            <strong className="text-ink">{formatXaf(r.financing.totalNeed)}</strong>. Financement prévu :{" "}
-            <strong className="text-ink">{formatXaf(r.financing.resources.total)}</strong> (apport{" "}
-            {formatXaf(r.financing.resources.equity)}
-            {r.financing.resources.loans > 0 ? `, prêts ${formatXaf(r.financing.resources.loans)}` : ""}
-            {r.financing.resources.grants > 0 ? `, aides ${formatXaf(r.financing.resources.grants)}` : ""}).
-          </p>
-          {r.financing.shortfall > 0 ? (
-            <p className="mt-1 font-semibold text-danger">
-              Il manque {formatXaf(r.financing.shortfall)} pour passer le mois le plus difficile.
-            </p>
-          ) : null}
+          <p>{v.financing}</p>
+          {v.shortfall ? <p className="mt-1 font-semibold text-danger">{v.shortfall}</p> : null}
         </Sub>
-        <Sub title={`Prévisions sur ${r.years.length} ans (scénario réaliste)`}>
+        <Sub title={v.forecastTitle}>
           <Table>
             <thead>
               <tr className="border-b border-line">
                 <th className={th}>En FCFA</th>
-                {r.years.map((y) => (
-                  <th key={y.year} className={`${th} text-right`}>
-                    An {y.year}
+                {v.forecastYears.map((y) => (
+                  <th key={y} className={`${th} text-right`}>
+                    {y}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {(
-                [
-                  ["Ventes", "revenue"],
-                  ["Bénéfice", "netResult"],
-                  ["Argent en caisse en fin d'année", "cashEnd"],
-                ] as const
-              ).map(([label, key]) => (
-                <tr key={key} className="border-b border-line/70 last:border-0">
-                  <td className={td}>{label}</td>
-                  {r.years.map((y) => (
-                    <td key={y.year} className={num}>
-                      {formatXaf(y[key])}
+              {v.forecastRows.map((row) => (
+                <tr key={row.label} className="border-b border-line/70 last:border-0">
+                  <td className={td}>{row.label}</td>
+                  {row.values.map((value, i) => (
+                    <td key={i} className={num}>
+                      {value}
                     </td>
                   ))}
                 </tr>
@@ -208,28 +168,17 @@ export function PlanDocumentView({ doc, a, results, project, minimumWage }: Prop
               </tr>
             </thead>
             <tbody>
-              {(["prudent", "realiste", "optimiste"] as const).map((id) => (
-                <tr key={id} className="border-b border-line/70 last:border-0">
-                  <td className={td}>{SCENARIO_LABEL[id]}</td>
-                  <td className={num}>{formatXaf(results[id].years[0].revenue)}</td>
-                  <td className={num}>{formatXaf(results[id].years[0].netResult)}</td>
+              {v.scenarios.map((s) => (
+                <tr key={s.label} className="border-b border-line/70 last:border-0">
+                  <td className={td}>{s.label}</td>
+                  <td className={num}>{s.revenue}</td>
+                  <td className={num}>{s.net}</td>
                 </tr>
               ))}
             </tbody>
           </Table>
         </Sub>
-        <p>
-          {be
-            ? `Dans le scénario réaliste, l'activité devient rentable en ${formatMonth(r.months[be - 1].month)}.`
-            : "Dans le scénario réaliste, l'activité n'atteint pas la rentabilité sur la période étudiée."}
-          {pay
-            ? pay.loss
-              ? " La première année est en perte : l'entrepreneur ne pourra pas se verser de salaire."
-              : ` Travaillant seul, l'entrepreneur pourra se verser environ ${formatXaf(
-                  Math.round(pay.monthly / 1000) * 1000,
-                )} par mois la première année.`
-            : ""}
-        </p>
+        <p>{v.outlook}</p>
       </Section>
 
       <Section n={6} title="Le marketing">
@@ -245,16 +194,16 @@ export function PlanDocumentView({ doc, a, results, project, minimumWage }: Prop
             </tr>
           </thead>
           <tbody>
-            {doc.marketing.canaux.map((c, i) => (
+            {v.marketing.map((c, i) => (
               <tr key={`${c.canal}-${i}`} className="border-b border-line/70 last:border-0">
                 <td className={`${td} font-semibold`}>{c.canal}</td>
                 <td className={`${td} text-ink-soft`}>{c.action}</td>
-                <td className={num}>{budget > 0 ? formatXaf(amounts[i]) : "—"}</td>
+                <td className={num}>{c.budget}</td>
               </tr>
             ))}
           </tbody>
         </Table>
-        {budget === 0 ? (
+        {v.marketingWithoutBudget ? (
           <p className="text-sm text-muted">Aucun budget marketing n&apos;est prévu dans le plan financier.</p>
         ) : null}
         <Sub title="Les 90 premiers jours">
@@ -297,11 +246,7 @@ export function PlanDocumentView({ doc, a, results, project, minimumWage }: Prop
         <Paragraphs text={doc.conclusion} />
       </Section>
 
-      <footer className="mt-12 border-t border-line pt-4 text-xs leading-relaxed text-muted">
-        Les chiffres de ce document sont des hypothèses proposées automatiquement puis calculées par un moteur
-        financier ; ils ne proviennent pas d&apos;une étude de terrain et doivent être vérifiés. Montants en francs CFA,
-        hors taxes.
-      </footer>
+      <footer className="mt-12 border-t border-line pt-4 text-xs leading-relaxed text-muted">{v.footer}</footer>
     </article>
   );
 }
