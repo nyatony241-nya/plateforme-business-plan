@@ -9,7 +9,8 @@ export const TEST_PARAMS: CountryParams = {
   corporateTaxRate: 0.3,
   minimumTaxRate: 0.01,
   minimumTaxFloor: 0,
-  employerSocialRate: 0.2,
+  minimumTaxExemptYears: 0,
+  employerContributions: [{ label: "Charges patronales", rate: 0.2, monthlyCeiling: null }],
   lossCarryForwardYears: 3,
 };
 

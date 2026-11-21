@@ -15,10 +15,20 @@ export interface CountryParams {
   minimumTaxRate: number;
   /** Montant plancher du minimum d'impôt, en XAF. */
   minimumTaxFloor: number;
-  /** Charges sociales patronales, en fraction du salaire brut. */
-  employerSocialRate: number;
+  /** Nombre de premiers exercices dispensés du minimum d'impôt (0 = aucune dispense). */
+  minimumTaxExemptYears: number;
+  /** Cotisations patronales, chacune avec son plafond mensuel éventuel. */
+  employerContributions: EmployerContribution[];
   /** Nombre d'années pendant lesquelles un déficit est reportable (0 = aucun report). */
   lossCarryForwardYears: number;
+}
+
+export interface EmployerContribution {
+  label: string;
+  /** Taux appliqué au salaire brut, dans la limite du plafond. */
+  rate: number;
+  /** Plafond mensuel du salaire soumis à cotisation, ou null si aucun plafond. */
+  monthlyCeiling: number | null;
 }
 
 export type InvestmentKind =

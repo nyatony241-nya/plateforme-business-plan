@@ -59,6 +59,30 @@ export async function getMyProject(id: string): Promise<Project | null> {
   return data;
 }
 
+/** Hypothèses financières enregistrées du projet, ou null si aucune saisie. */
+export async function getAssumptions(projectId: string): Promise<{ data: unknown; updatedAt: string } | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("project_assumptions")
+    .select("data, updated_at")
+    .eq("project_id", projectId)
+    .maybeSingle();
+  if (error) throw new Error(`Lecture des hypothèses impossible : ${error.message}`);
+  return data ? { data: data.data, updatedAt: data.updated_at as string } : null;
+}
+
+/** Enregistre les hypothèses ; la sécurité au niveau des lignes vérifie le propriétaire. */
+export async function upsertAssumptions(projectId: string, data: unknown): Promise<string> {
+  const supabase = await createClient();
+  const { data: row, error } = await supabase
+    .from("project_assumptions")
+    .upsert({ project_id: projectId, schema_version: 1, data }, { onConflict: "project_id" })
+    .select("updated_at")
+    .single();
+  if (error) throw new Error(`Enregistrement des hypothèses impossible : ${error.message}`);
+  return row.updated_at as string;
+}
+
 export async function insertProject(input: NewProjectInput): Promise<string> {
   const supabase = await createClient();
   const { data, error } = await supabase

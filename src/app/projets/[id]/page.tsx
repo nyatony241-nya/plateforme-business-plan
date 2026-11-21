@@ -14,7 +14,6 @@ export const metadata: Metadata = { title: "Projet" };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const prochainesEtapes = [
-  { title: "Plan financier", text: "Investissements, offre, personnel, charges : trois scénarios calculés." },
   { title: "Assistant de cadrage", text: "Questions ciblées pour compléter votre idée." },
   { title: "Rédaction et export", text: "Plan complet, export PDF et Word." },
 ];
@@ -61,11 +60,26 @@ export default async function ProjectPage({ params }: PageProps<"/projets/[id]">
           </Card>
         ) : null}
 
+        <Link
+          href={`/projets/${project.id}/plan-financier`}
+          className="mt-8 flex flex-col gap-4 rounded-2xl border border-forest/30 bg-forest-50 p-6 transition-colors hover:border-forest sm:flex-row sm:items-center sm:justify-between"
+        >
+          <span>
+            <span className="block font-display text-2xl font-semibold text-ink">Plan financier</span>
+            <span className="mt-1 block text-ink-soft">
+              Investissements, ventes, personnel, charges, financement : trois scénarios calculés sur 3 ou 5 ans.
+            </span>
+          </span>
+          <span className="inline-flex shrink-0 items-center justify-center rounded-xl bg-forest px-5 py-3 text-[0.95rem] font-semibold text-white">
+            Ouvrir
+          </span>
+        </Link>
+
         <section className="mt-10" aria-labelledby="etapes">
           <h2 id="etapes" className="font-display text-2xl font-semibold text-ink">
             Prochaines étapes
           </h2>
-          <ul className="mt-5 grid gap-4 sm:grid-cols-3">
+          <ul className="mt-5 grid gap-4 sm:grid-cols-2">
             {prochainesEtapes.map((step) => (
               <li key={step.title} className="rounded-2xl border border-dashed border-line-strong p-5">
                 <p className="font-bold text-ink">{step.title}</p>

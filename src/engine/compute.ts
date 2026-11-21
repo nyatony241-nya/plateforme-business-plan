@@ -35,7 +35,11 @@ export function validatePlanInput(input: PlanInput) {
   check(isRate(p.corporateTaxRate), "Taux d'impôt sur les sociétés invalide.");
   check(isRate(p.minimumTaxRate), "Taux du minimum d'impôt invalide.");
   check(isMoney(p.minimumTaxFloor), "Plancher du minimum d'impôt invalide.");
-  check(p.employerSocialRate >= 0 && p.employerSocialRate < 2, "Taux de charges sociales invalide.");
+  check(Number.isInteger(p.minimumTaxExemptYears) && p.minimumTaxExemptYears >= 0, "Dispense de minimum d'impôt invalide.");
+  for (const c of p.employerContributions) {
+    check(isRate(c.rate), `Cotisation « ${c.label} » : taux invalide.`);
+    check(c.monthlyCeiling === null || c.monthlyCeiling > 0, `Cotisation « ${c.label} » : plafond invalide.`);
+  }
   check(Number.isInteger(p.lossCarryForwardYears) && p.lossCarryForwardYears >= 0, "Report de déficit invalide.");
 
   for (const inv of input.investments) {
@@ -66,6 +70,18 @@ export function validatePlanInput(input: PlanInput) {
 }
 
 const growth = (rate: number | undefined, year: number) => Math.pow(1 + (rate ?? 0), year - 1);
+
+/** Coût employeur mensuel d'un salarié : brut + cotisations patronales plafonnées. */
+export function employerCost(monthlyGross: number, params: Pick<PlanInput["params"], "employerContributions">) {
+  return (
+    monthlyGross +
+    sum(
+      params.employerContributions.map(
+        (c) => c.rate * (c.monthlyCeiling === null ? monthlyGross : Math.min(monthlyGross, c.monthlyCeiling)),
+      ),
+    )
+  );
+}
 
 /** Calcule un scénario complet : compte de résultat, trésorerie, plan de financement, indicateurs. */
 export function computePlan(input: PlanInput, scenario: ScenarioId = "realiste"): PlanResult {
@@ -108,7 +124,7 @@ export function computePlan(input: PlanInput, scenario: ScenarioId = "realiste")
       sum(
         input.staff
           .filter((s) => m >= (s.startMonth ?? 1))
-          .map((s) => s.monthlyGross * s.headcount * growth(s.annualRaise, year) * (1 + p.employerSocialRate)),
+          .map((s) => s.headcount * employerCost(s.monthlyGross * growth(s.annualRaise, year), p)),
       ),
     );
 
@@ -174,7 +190,8 @@ export function computePlan(input: PlanInput, scenario: ScenarioId = "realiste")
         taxable -= used;
       }
     }
-    const minimumTax = Math.max(yearRevenue * p.minimumTaxRate, p.minimumTaxFloor);
+    const minimumTax =
+      year <= p.minimumTaxExemptYears ? 0 : Math.max(yearRevenue * p.minimumTaxRate, p.minimumTaxFloor);
     incomeTax[year * 12] = roundXaf(Math.max(taxable * p.corporateTaxRate, minimumTax));
   }
 
