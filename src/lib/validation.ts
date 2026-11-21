@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { BUDGET_OPTIONS } from "@/lib/project-options";
 
 /** Messages d'erreur en français, affichés tels quels sous les champs. */
 const requis = "Ce champ est obligatoire.";
@@ -34,6 +35,17 @@ export const newProjectSchema = z.object({
 });
 
 export type NewProjectInput = z.infer<typeof newProjectSchema>;
+
+const budgetValues = BUDGET_OPTIONS.map((o) => String(o.value)) as [string, ...string[]];
+
+/** Contexte demandé avant la génération automatique : des choix, aucun chiffre à taper. */
+export const projectContextSchema = z.object({
+  budget: z.enum(budgetValues, "Choisissez votre budget.").transform(Number),
+  mode: z.enum(["local", "en_ligne", "mixte"], "Choisissez où vous vendrez."),
+  staffing: z.enum(["seul", "recruter"], "Choisissez une option."),
+});
+
+export type ProjectContextInput = z.infer<typeof projectContextSchema>;
 
 /** Résultat d'une action de formulaire, compatible avec useActionState. */
 export type FormState = {

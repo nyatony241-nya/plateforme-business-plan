@@ -21,6 +21,8 @@ export const INVESTMENT_KINDS: { value: InvestmentKind; label: string; depreciab
 const money = z.number().int().min(0).max(1e13);
 const rowId = z.string().min(1).max(64);
 const label = z.string().max(120);
+/** Explication d'une hypothèse générée automatiquement (« pourquoi ce chiffre »). */
+const note = z.string().max(400).optional();
 
 export const assumptionsSchema = z.object({
   startMonth: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
@@ -30,6 +32,7 @@ export const assumptionsSchema = z.object({
       z.object({
         id: rowId,
         label,
+        note,
         kind: z.enum(INVESTMENT_KINDS.map((k) => k.value) as [InvestmentKind, ...InvestmentKind[]]),
         amount: money,
         lifeYears: z.number().min(0).max(50),
@@ -41,6 +44,7 @@ export const assumptionsSchema = z.object({
       z.object({
         id: rowId,
         label,
+        note,
         unitPrice: money,
         unitCost: money,
         monthlyVolume: z.number().min(0).max(1e9),
@@ -54,14 +58,16 @@ export const assumptionsSchema = z.object({
       z.object({
         id: rowId,
         label,
+        note,
         monthlyGross: money,
         headcount: z.number().int().min(0).max(10_000),
         startMonth: z.number().int().min(1).max(60),
       }),
     )
     .max(50),
-  fixedCosts: z.array(z.object({ id: rowId, label, monthly: money })).max(50),
+  fixedCosts: z.array(z.object({ id: rowId, label, note, monthly: money })).max(50),
   financing: z.object({
+    note,
     equity: money,
     grants: money,
     loans: z
@@ -69,6 +75,7 @@ export const assumptionsSchema = z.object({
         z.object({
           id: rowId,
           label,
+          note,
           principal: money,
           annualRate: z.number().min(0).max(0.99),
           months: z.number().int().min(1).max(360),
@@ -81,6 +88,15 @@ export const assumptionsSchema = z.object({
     customerDays: z.number().int().min(0).max(365),
     supplierDays: z.number().int().min(0).max(365),
   }),
+  /** Présent quand les hypothèses ont été produites automatiquement. */
+  generation: z
+    .object({
+      model: z.string().max(100),
+      generatedAt: z.string().max(40),
+      summary: z.string().max(1200),
+      warnings: z.array(z.string().max(400)).max(8),
+    })
+    .optional(),
 });
 
 export type Assumptions = z.infer<typeof assumptionsSchema>;

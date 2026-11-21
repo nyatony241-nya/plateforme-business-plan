@@ -3,14 +3,19 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
 import { ConfigNotice } from "@/components/config-notice";
-import { assumptionsSchema, defaultAssumptions } from "@/lib/assumptions";
+import { StatusBadge } from "@/components/ui";
+import { assumptionsSchema } from "@/lib/assumptions";
 import { getCountryParams } from "@/lib/data/country-params";
 import { getAssumptions, getMyProject } from "@/lib/data/projects";
+import { formatDateFr } from "@/lib/data-status";
 import { isSupabaseConfigured } from "@/lib/env";
 import { getCurrentUser } from "@/lib/supabase/server";
+import { GenerateForm } from "../generate-form";
 import { PlanEditor } from "./editor";
 
 export const metadata: Metadata = { title: "Plan financier" };
+/** La régénération (IA + calcul) peut prendre jusqu'à une minute. */
+export const maxDuration = 120;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -36,29 +41,75 @@ export default async function FinancialPlanPage({ params }: PageProps<"/projets/
 
   const [saved, country] = await Promise.all([getAssumptions(id), getCountryParams(project.country_code)]);
   const parsed = saved ? assumptionsSchema.safeParse(saved.data) : null;
-  const initial = parsed?.success ? parsed.data : defaultAssumptions();
+  const initial = parsed?.success ? parsed.data : null;
+  const defaults = { budget: project.budget, mode: project.mode, staffing: project.staffing };
+  const generation = initial?.generation;
 
   return (
     <>
       <AppHeader name={(user.user_metadata?.full_name as string | undefined) ?? user.email} />
-      <main className="mx-auto w-full max-w-7xl flex-1 px-5 pb-28 pt-8 sm:px-8 lg:pb-8">
+      <main className="mx-auto w-full max-w-7xl flex-1 px-5 pb-28 pt-8 sm:px-8">
         <Link href={`/projets/${id}`} className="text-sm font-semibold text-forest hover:underline">
           ← {project.name}
         </Link>
         <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight text-ink">Plan financier</h1>
-        <p className="mt-2 max-w-2xl text-ink-soft">
-          Saisissez vos chiffres à gauche : les résultats des trois scénarios se mettent à jour à droite, et tout est
-          enregistré automatiquement.
-        </p>
-        <div className="mt-8">
-          <PlanEditor
-            projectId={id}
-            initial={initial}
-            initialSavedAt={saved?.updatedAt ?? null}
-            params={country.params}
-            provenance={country.provenance}
-          />
-        </div>
+
+        {!initial || !saved ? (
+          <section className="mt-6 max-w-4xl rounded-2xl border border-forest/30 bg-forest-50 p-6">
+            <h2 className="font-display text-2xl font-semibold text-ink">Générer le plan</h2>
+            <p className="mt-1 text-ink-soft">
+              Trois réponses, et la plateforme construit tout : investissements, prix, ventes, charges, personnel,
+              financement, puis trois scénarios sur 3 ans.
+            </p>
+            <div className="mt-5">
+              <GenerateForm projectId={id} defaults={defaults} />
+            </div>
+          </section>
+        ) : (
+          <>
+            {generation ? (
+              <section className="mt-6 rounded-2xl border border-line bg-surface p-5 sm:p-6">
+                <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
+                  <StatusBadge status="hypothese" />
+                  Plan proposé automatiquement le {formatDateFr(generation.generatedAt)}
+                </div>
+                <p className="mt-3 max-w-3xl leading-relaxed text-ink">{generation.summary}</p>
+                {generation.warnings.length > 0 ? (
+                  <div className="mt-4">
+                    <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-muted">À vérifier en priorité</h2>
+                    <ul className="mt-2 flex flex-col gap-1.5 text-sm leading-relaxed text-ink-soft">
+                      {generation.warnings.map((w) => (
+                        <li key={w} className="flex gap-2">
+                          <span aria-hidden className="text-gold">•</span>
+                          {w}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+                <details className="mt-5 border-t border-line pt-4">
+                  <summary className="cursor-pointer text-sm font-semibold text-forest">Regénérer le plan</summary>
+                  <p className="mt-2 text-sm text-ink-soft">
+                    Les hypothèses actuelles, y compris vos corrections, seront remplacées.
+                  </p>
+                  <div className="mt-4">
+                    <GenerateForm projectId={id} defaults={defaults} submitLabel="Regénérer le plan" />
+                  </div>
+                </details>
+              </section>
+            ) : null}
+            <div className="mt-8">
+              <PlanEditor
+                key={saved.updatedAt}
+                projectId={id}
+                initial={initial}
+                initialSavedAt={saved.updatedAt}
+                params={country.params}
+                provenance={country.provenance}
+              />
+            </div>
+          </>
+        )}
       </main>
     </>
   );
