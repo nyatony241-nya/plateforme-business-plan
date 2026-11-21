@@ -1,6 +1,6 @@
 import { SCENARIO_LABEL, type PlanResult, type ScenarioId } from "@/engine";
 import { INVESTMENT_KINDS, type Assumptions } from "@/lib/assumptions";
-import { monthlyMarketingBudget, splitBudget, type PlanDocument, type PlanPhoto } from "@/lib/business-plan";
+import { PHOTO_SOURCES, monthlyMarketingBudget, splitBudget, type PlanDocument, type PlanPhoto } from "@/lib/business-plan";
 import { formatDateFr } from "@/lib/data-status";
 import { formatMonth, formatXaf } from "@/lib/format";
 import { ownerIncome } from "@/lib/owner-income";
@@ -31,8 +31,8 @@ const CHANNEL_EMOJI: Record<string, string> = {
 /** Note sur 5 en étoiles : ★★★★☆ */
 export const stars = (note: number) => "★".repeat(note) + "☆".repeat(Math.max(0, 5 - note));
 
-/** Légende de crédit d'une photo Pexels. */
-export const photoCredit = (photo: PlanPhoto) => `Photo : ${photo.photographer} sur Pexels`;
+/** Nom de la banque d'images d'une photo (Unsplash, Pexels). */
+export const photoSourceName = (photo: PlanPhoto) => PHOTO_SOURCES[photo.source];
 
 export type PlanViewInput = {
   doc: PlanDocument;
@@ -76,6 +76,8 @@ export function buildPlanView({ doc, a, results, project, minimumWage }: PlanVie
   ]
     .filter(Boolean)
     .join(" ");
+
+  const sources = [...new Set(Object.values(doc.photos ?? {}).map((ph) => photoSourceName(ph)))];
 
   const kpis = [
     { emoji: "💵", label: "Ventes la 1re année", value: formatXaf(r.years[0].revenue) },
@@ -123,7 +125,7 @@ export function buildPlanView({ doc, a, results, project, minimumWage }: PlanVie
     })),
     marketingWithoutBudget: budget === 0,
     footer:
-      (doc.photos && Object.keys(doc.photos).length > 0 ? "Photos fournies par Pexels. " : "") +
+      (sources.length > 0 ? `Photos fournies par ${sources.join(" et ")}. ` : "") +
       "Les chiffres de ce document sont des hypothèses proposées automatiquement puis calculées par un moteur financier ; ils ne proviennent pas d'une étude de terrain et doivent être vérifiés. Montants en francs CFA, hors taxes.",
   };
 }

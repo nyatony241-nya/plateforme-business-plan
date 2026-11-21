@@ -6,14 +6,19 @@ const text = (max: number) => z.string().trim().min(1).max(max);
 
 export const CHANNELS = ["Facebook", "TikTok", "WhatsApp", "Instagram", "Bouche-à-oreille", "Affichage", "Autre"] as const;
 
-/** Photo libre de droit (Pexels), avec ce qu'il faut pour créditer son auteur. */
+export const PHOTO_SOURCES = { pexels: "Pexels", unsplash: "Unsplash" } as const;
+
+/** Photo libre de droit (Unsplash ou Pexels), avec ce qu'il faut pour créditer son auteur. */
 export const planPhotoSchema = z.object({
-  id: z.number().int(),
+  source: z.enum(["pexels", "unsplash"]).default("pexels"),
+  id: z.union([z.number().int(), z.string().max(40)]),
   alt: z.string().max(300),
   photographer: z.string().max(120),
   photographerUrl: z.string().url().max(300),
   pageUrl: z.string().url().max(300),
-  src: z.string().url().max(400),
+  src: z.string().url().max(600),
+  /** Unsplash : adresse à appeler quand la photo est téléchargée (export Word). */
+  downloadLocation: z.string().url().max(400).optional(),
 });
 
 export type PlanPhoto = z.infer<typeof planPhotoSchema>;

@@ -6,7 +6,7 @@ import { generatePlanDocument } from "@/lib/ai/generate-plan-document";
 import { DEFAULT_MODEL } from "@/lib/ai/model";
 import { assumptionsSchema, toPlanInput } from "@/lib/assumptions";
 import { getCountryParams } from "@/lib/data/country-params";
-import { findPlanPhotos } from "@/lib/images/pexels";
+import { findPlanPhotos } from "@/lib/images/photos";
 import {
   countMyAiRunsSince,
   getAssumptions,

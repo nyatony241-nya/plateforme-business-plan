@@ -19,7 +19,8 @@ import {
   WidthType,
 } from "docx";
 import type { PhotoSlot, PlanPhoto } from "@/lib/business-plan";
-import { SECTIONS, buildPlanView, paragraphs, stars, type PlanViewInput } from "@/lib/business-plan-view";
+import { SECTIONS, buildPlanView, paragraphs, photoSourceName, stars, type PlanViewInput } from "@/lib/business-plan-view";
+import { reportDownload } from "@/lib/images/photos";
 
 const FOREST = "0F4D3A";
 const GOLD = "A8771F";
@@ -57,16 +58,19 @@ const h2 = (n: number) => {
 // Photos : 16:7 environ, sur toute la largeur du texte (en pixels à 96 ppp).
 const IMAGE_WIDTH = 640;
 
-/** Télécharge les photos Pexels pour les intégrer au fichier ; une photo indisponible est omise. */
+const PHOTO_HOSTS = ["https://images.unsplash.com/", "https://images.pexels.com/"];
+
+/** Télécharge les photos pour les intégrer au fichier ; une photo indisponible est omise. */
 async function loadPhotos(photos: Partial<Record<PhotoSlot, PlanPhoto>>) {
   const loaded: Partial<Record<PhotoSlot, { photo: PlanPhoto; data: Uint8Array }>> = {};
   await Promise.all(
     Object.entries(photos).map(async ([slot, photo]) => {
-      if (!photo || !photo.src.startsWith("https://images.pexels.com/")) return;
+      if (!photo || !PHOTO_HOSTS.some((host) => photo.src.startsWith(host))) return;
       try {
         const res = await fetch(photo.src, { signal: AbortSignal.timeout(8000) });
         if (!res.ok) return;
         loaded[slot as PhotoSlot] = { photo, data: new Uint8Array(await res.arrayBuffer()) };
+        await reportDownload(photo);
       } catch {
         // Photo omise.
       }
@@ -101,7 +105,7 @@ function photoBlock(item?: { photo: PlanPhoto; data: Uint8Array }, ratio = 627 /
         new TextRun({ text: " sur ", size: 16, color: MUTED }),
         new ExternalHyperlink({
           link: item.photo.pageUrl,
-          children: [new TextRun({ text: "Pexels", size: 16, color: MUTED, underline: {} })],
+          children: [new TextRun({ text: photoSourceName(item.photo), size: 16, color: MUTED, underline: {} })],
         }),
       ],
     }),

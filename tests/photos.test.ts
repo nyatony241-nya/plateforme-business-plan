@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { computeScenarios } from "@/engine";
 import { defaultAssumptions, toPlanInput } from "@/lib/assumptions";
 import { planDocumentSchema, type PlanPhoto } from "@/lib/business-plan";
-import { findPlanPhotos, searchPhoto } from "@/lib/images/pexels";
+import { findPlanPhotos, photoProvider, searchPhoto } from "@/lib/images/photos";
 import { businessPlanDocx } from "@/lib/word/business-plan-docx";
 import { TEST_PARAMS } from "./engine/fixtures";
 import { SAMPLE_DOC } from "./plan-doc-fixture";
@@ -26,30 +26,51 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe("photos Pexels", () => {
+function unsplashPhoto(id: string) {
+  return {
+    id,
+    alt_description: "socks on a shelf",
+    urls: { raw: `https://images.unsplash.com/photo-${id}?ixid=abc` },
+    links: { html: `https://unsplash.com/photos/${id}`, download_location: `https://api.unsplash.com/photos/${id}/download?ixid=abc` },
+    user: { name: "Kofi Boateng", links: { html: "https://unsplash.com/@kofi" } },
+  };
+}
+
+describe("photos libres de droit", () => {
   it("ne cherche rien sans clé", async () => {
+    vi.stubEnv("UNSPLASH_ACCESS_KEY", "");
     vi.stubEnv("PEXELS_API_KEY", "");
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
+    expect(photoProvider()).toBeNull();
     expect(await findPlanPhotos({ couverture: "socks shop" })).toEqual({});
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("garde le crédit du photographe et évite de reprendre la même photo", async () => {
-    vi.stubEnv("PEXELS_API_KEY", "cle-test");
-    const fetchMock = vi.fn(async () => Response.json({ photos: [pexelsPhoto(1), pexelsPhoto(2)] }));
+  it("Unsplash en priorité : crédit avec lien de suivi, recadrage paysage, pas de doublon", async () => {
+    vi.stubEnv("UNSPLASH_ACCESS_KEY", "cle-unsplash");
+    vi.stubEnv("PEXELS_API_KEY", "cle-pexels");
+    const fetchMock = vi.fn(async () => Response.json({ results: [unsplashPhoto("a1"), unsplashPhoto("b2")] }));
     vi.stubGlobal("fetch", fetchMock);
     const photos = await findPlanPhotos({ couverture: "socks shop", projet: "socks display" });
-    expect(photos.couverture?.id).toBe(1);
-    expect(photos.projet?.id).toBe(2);
-    expect(photos.projet?.photographer).toBe("Ama Mensah");
+    expect(photos.couverture).toMatchObject({ source: "unsplash", id: "a1", photographer: "Kofi Boateng" });
+    expect(photos.projet?.id).toBe("b2");
+    expect(photos.couverture?.photographerUrl).toContain("utm_source=entreprendre");
+    expect(photos.couverture?.src).toContain("w=1200&h=627&fit=crop");
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toContain("orientation=landscape");
-    expect((init.headers as Record<string, string>).Authorization).toBe("cle-test");
+    expect(url).toContain("api.unsplash.com/search/photos");
+    expect((init.headers as Record<string, string>).Authorization).toBe("Client-ID cle-unsplash");
   });
 
-  it("continue sans photo si Pexels ne répond pas", async () => {
-    vi.stubEnv("PEXELS_API_KEY", "cle-test");
+  it("Pexels si seule sa clé existe", async () => {
+    vi.stubEnv("UNSPLASH_ACCESS_KEY", "");
+    vi.stubEnv("PEXELS_API_KEY", "cle-pexels");
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ photos: [pexelsPhoto(1)] })));
+    expect((await findPlanPhotos({ couverture: "socks" })).couverture).toMatchObject({ source: "pexels", id: 1 });
+  });
+
+  it("continue sans photo si la banque d'images ne répond pas", async () => {
+    vi.stubEnv("UNSPLASH_ACCESS_KEY", "cle-unsplash");
     vi.stubGlobal("fetch", vi.fn(async () => new Response("erreur", { status: 500 })));
     await expect(searchPhoto("socks", new Set())).rejects.toThrow();
     expect(await findPlanPhotos({ couverture: "socks" })).toEqual({});
@@ -58,14 +79,18 @@ describe("photos Pexels", () => {
 
 describe("export Word illustré", () => {
   it("intègre la photo, son crédit, les émoticônes et les chiffres clés", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JPEG)));
+    vi.stubEnv("UNSPLASH_ACCESS_KEY", "cle-unsplash");
+    const fetchMock = vi.fn<(url: string) => Promise<Response>>(async () => new Response(JPEG));
+    vi.stubGlobal("fetch", fetchMock);
     const photo: PlanPhoto = {
-      id: 1,
+      source: "unsplash",
+      id: "a1",
       alt: "Chaussettes",
       photographer: "Ama Mensah",
-      photographerUrl: "https://www.pexels.com/@ama",
-      pageUrl: "https://www.pexels.com/photo/1/",
-      src: "https://images.pexels.com/photos/1/p.jpeg?h=627&w=1200",
+      photographerUrl: "https://unsplash.com/@ama",
+      pageUrl: "https://unsplash.com/photos/a1",
+      src: "https://images.unsplash.com/photo-a1?w=1200&h=627&fit=crop",
+      downloadLocation: "https://api.unsplash.com/photos/a1/download",
     };
     const doc = planDocumentSchema.parse({ ...SAMPLE_DOC, photos: { couverture: photo } });
     const a = { ...defaultAssumptions(new Date("2026-11-21T12:00:00Z")), offers: [{ id: "o", label: "Paire", unitPrice: 1500, unitCost: 600, monthlyVolume: 250, rampUpMonths: 3, annualVolumeGrowth: 0 }] };
@@ -82,6 +107,8 @@ describe("export Word illustré", () => {
     expect(xml).toContain("Ama Mensah");
     expect(xml).toContain("📌");
     expect(xml).toContain("Rentable dès");
-    expect(xml).toContain("Photos fournies par Pexels");
+    expect(xml).toContain("Photos fournies par Unsplash");
+    // Unsplash : téléchargement signalé.
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/download"))).toBe(true);
   });
 });

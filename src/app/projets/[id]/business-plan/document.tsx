@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { CashChart } from "@/components/cash-chart";
 import { SCENARIO_LABEL } from "@/engine";
 import type { PlanPhoto } from "@/lib/business-plan";
-import { SECTIONS, buildPlanView, paragraphs, stars, type PlanViewInput } from "@/lib/business-plan-view";
+import { SECTIONS, buildPlanView, paragraphs, photoSourceName, stars, type PlanViewInput } from "@/lib/business-plan-view";
 import { SCENARIO_COLOR, SCENARIO_ORDER } from "@/lib/scenario-colors";
 
 function Section({ n, children }: { n: number; children: ReactNode }) {
@@ -58,7 +58,7 @@ function Photo({ photo, tall = false }: { photo?: PlanPhoto; tall?: boolean }) {
   if (!photo) return null;
   return (
     <figure className="break-inside-avoid">
-      {/* Photo hébergée par Pexels ; chargée tout de suite pour l'impression en PDF. */}
+      {/* Photo servie par la banque d'images (lien direct exigé) ; chargée tout de suite pour l'impression en PDF. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={photo.src}
@@ -73,7 +73,7 @@ function Photo({ photo, tall = false }: { photo?: PlanPhoto; tall?: boolean }) {
         </a>{" "}
         sur{" "}
         <a href={photo.pageUrl} className="underline-offset-2 hover:underline">
-          Pexels
+          {photoSourceName(photo)}
         </a>
       </figcaption>
     </figure>
