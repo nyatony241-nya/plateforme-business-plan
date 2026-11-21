@@ -50,6 +50,8 @@ export const planDocumentSchema = z.object({
   photoQueries: z.partialRecord(z.enum(PHOTO_SLOTS), z.string().max(80)).optional(),
   /** Mots anglais désignant ce que l'entreprise vend : une photo retenue doit en montrer un. */
   photoKeywords: z.array(z.string().max(30)).max(6).optional(),
+  /** Type de commerce, en anglais, pour les scènes de section (clients, vendeur, promotion). */
+  photoCategory: z.string().max(40).optional(),
   photos: z.partialRecord(z.enum(PHOTO_SLOTS), planPhotoSchema).optional(),
   generation: z.object({ model: z.string().max(100), generatedAt: z.string().max(40) }),
 });

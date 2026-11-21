@@ -174,16 +174,33 @@ describe("photos fidèles à l'activité", () => {
     expect(photos.marketing?.id).toBe("tel");
   });
 
+  it("préfère une scène de clients du même commerce à une simple photo du produit", async () => {
+    vi.stubEnv("UNSPLASH_ACCESS_KEY", "cle-unsplash");
+    const fetchMock = vi.fn<(url: string) => Promise<Response>>(async (url) =>
+      Response.json({
+        results: url.includes("clothing")
+          ? [shot("scene", "black women shopping in a clothing store")]
+          : [shot("pieds", "person wearing black white and red socks")],
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const photos = await findPlanPhotos({ marche: "african woman buying socks" }, ["sock", "socks"], "clothing store");
+    expect(fetchMock.mock.calls.some(([url]) => url.includes("african%20clothing%20store%20customers%20shopping"))).toBe(true);
+    expect(photos.marche?.id).toBe("scene");
+  });
+
   it("chaque recherche nomme ce que l'entreprise vend", async () => {
     const { photoBrief } = await import("@/lib/ai/generate-plan-document");
     const brief = photoBrief({
       motsCles: ["Sock", "socks", "x"],
+      categorie: "Clothing store",
       couverture: "african shop owner counter",
       projet: "colorful socks display",
       marche: "african clients street",
       marketing: "african person smartphone",
     });
     expect(brief.photoKeywords).toEqual(["sock", "socks"]);
+    expect(brief.photoCategory).toBe("clothing store");
     expect(brief.photoQueries.couverture).toBe("sock african shop owner counter");
     expect(brief.photoQueries.projet).toBe("colorful socks display");
   });

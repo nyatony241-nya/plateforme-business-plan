@@ -106,12 +106,20 @@ export function africanize(query: string) {
 
 /** Ce que chaque section doit montrer, en plus du produit ou du service. */
 const SLOT_HINTS: Record<PhotoSlot, string[]> = {
-  couverture: ["shop", "store", "market", "seller", "vendor", "salon", "stall", "owner", "business", "workshop"],
+  couverture: ["shop", "store", "market", "seller", "vendor", "salon", "stall", "owner", "business", "workshop", "shopkeeper"],
   projet: ["display", "shelf", "closeup", "close", "product", "detail", "pile", "stack", "rack"],
-  marche: ["customer", "client", "shopping", "buying", "buyer", "people", "woman", "man", "family"],
+  marche: ["customer", "client", "shopping", "shopper", "buying", "buyer", "people", "crowd", "family"],
   marketing: ["phone", "smartphone", "social", "online", "laptop", "poster", "sign", "advert", "storefront"],
 };
+/** Scène recherchée avec le type de commerce, quand le produit seul ne suffit pas. */
+const SLOT_SCENE: Partial<Record<PhotoSlot, string>> = {
+  couverture: "shop owner",
+  marche: "customers shopping",
+  marketing: "smartphone",
+};
 const AFRICAN = ["african", "africa", "black", "gabon", "nigeria", "ghana", "kenya", "senegal", "cameroon", "congo"];
+/** Mots trop généraux pour désigner un type de commerce. */
+const GENERIC = new Set(["store", "shop", "business", "service", "company", "small", "local"]);
 
 const words = (text: string) =>
   text
@@ -127,37 +135,50 @@ const mentions = (text: string, list: string[]) => {
 };
 
 /**
- * Pertinence d'une photo pour une section, d'après sa description : elle doit montrer ce que
- * l'entreprise vend (mots-clés), si possible en Afrique et dans la scène de la section.
+ * Pertinence d'une photo pour une section, d'après sa description : ce que l'entreprise vend
+ * (10) ou à défaut son type de commerce (6), la scène de la section (5), l'Afrique (3).
+ * 0 = sans rapport avec l'activité.
  */
-export function photoScore(photo: Pick<PlanPhoto, "alt">, slot: PhotoSlot, keywords: string[]) {
+export function photoScore(
+  photo: Pick<PlanPhoto, "alt">,
+  slot: PhotoSlot,
+  keywords: string[],
+  category?: string,
+) {
   const alt = photo.alt ?? "";
-  return (
-    (keywords.length === 0 || mentions(alt, keywords) ? 10 : 0) +
-    (mentions(alt, AFRICAN) ? 2 : 0) +
-    (mentions(alt, SLOT_HINTS[slot]) ? 3 : 0)
-  );
+  const categoryWords = (category ?? "").split(/\s+/).filter((w) => w.length >= 3 && !GENERIC.has(w));
+  const business =
+    keywords.length === 0 || mentions(alt, keywords)
+      ? 10
+      : slot !== "projet" && categoryWords.length > 0 && mentions(alt, categoryWords)
+        ? 6
+        : 0;
+  if (business === 0) return 0;
+  return business + (mentions(alt, SLOT_HINTS[slot]) ? 5 : 0) + (mentions(alt, AFRICAN) ? 3 : 0);
 }
 
-/** Meilleure photo non encore utilisée ; sans mots-clés, la première ; sinon une qui montre le produit. */
-function bestPhoto(photos: PlanPhoto[], slot: PhotoSlot, keywords: string[], used: Set<string>, requireHint = false) {
+function bestPhoto(photos: PlanPhoto[], slot: PhotoSlot, keywords: string[], category: string | undefined, used: Set<string>) {
   let best: { photo: PlanPhoto; score: number } | null = null;
   for (const photo of photos) {
     if (used.has(String(photo.id))) continue;
-    const score = photoScore(photo, slot, keywords);
-    if (keywords.length > 0 && score < 10 && !(requireHint && mentions(photo.alt ?? "", SLOT_HINTS[slot]))) continue;
-    if (!best || score > best.score) best = { photo, score };
+    const score = photoScore(photo, slot, keywords, category);
+    if (score > 0 && (!best || score > best.score)) best = { photo, score };
   }
-  return best?.photo ?? null;
+  return best;
 }
 
 /**
- * Une photo par section, qui montre ce que l'entreprise vend : la recherche de la section
- * (en Afrique d'abord), puis une recherche sur le produit seul. Une section sans photo
- * pertinente reste sans photo plutôt que d'afficher une image hors sujet ; seule la section
- * marketing accepte une scène de promotion générique (smartphone, vitrine).
+ * Une photo par section, qui montre l'activité et la scène de la section : on compare les
+ * résultats de la recherche de la section et d'une scène du même type de commerce (en Afrique
+ * d'abord), puis on se replie sur le produit seul. Une section sans photo pertinente reste sans
+ * photo plutôt que d'afficher une image hors sujet ; seule la section marketing accepte une
+ * scène de promotion générique (smartphone, vitrine).
  */
-export async function findPlanPhotos(queries: Partial<Record<PhotoSlot, string>>, keywords: string[] = []) {
+export async function findPlanPhotos(
+  queries: Partial<Record<PhotoSlot, string>>,
+  keywords: string[] = [],
+  category?: string,
+) {
   const photos: Partial<Record<PhotoSlot, PlanPhoto>> = {};
   if (!photoProvider()) return photos;
   const used = new Set<string>();
@@ -167,17 +188,28 @@ export async function findPlanPhotos(queries: Partial<Record<PhotoSlot, string>>
     return cache.get(q)!;
   };
   const subject = keywords.find((k) => k.endsWith("s")) ?? keywords[0];
+  const pick = async (list: string[], slot: PhotoSlot) => {
+    let best: { photo: PlanPhoto; score: number } | null = null;
+    for (const q of list) {
+      const candidate = bestPhoto(await search(q), slot, keywords, category, used);
+      if (candidate && (!best || candidate.score > best.score)) best = candidate;
+    }
+    return best?.photo ?? null;
+  };
 
   for (const slot of PHOTO_SLOTS) {
     const query = queries[slot]?.trim();
     if (!query) continue;
-    const attempts = [...new Set([africanize(query), query, ...(subject ? [africanize(subject), subject] : [])])];
-    let photo: PlanPhoto | null = null;
-    for (const q of attempts) {
-      photo = bestPhoto(await search(q), slot, keywords, used);
-      if (photo) break;
+    const scene = SLOT_SCENE[slot];
+    const first = [africanize(query), ...(category && scene ? [africanize(`${category} ${scene}`)] : [])];
+    let photo =
+      (await pick(first, slot)) ??
+      (await pick([...new Set([query, ...(subject ? [africanize(subject), subject] : [])])], slot));
+    if (!photo && slot === "marketing") {
+      photo = (await search(africanize(query))).find(
+        (p) => !used.has(String(p.id)) && mentions(p.alt ?? "", SLOT_HINTS.marketing),
+      ) ?? null;
     }
-    if (!photo && slot === "marketing") photo = bestPhoto(await search(africanize(query)), slot, keywords, used, true);
     if (photo) {
       photos[slot] = photo;
       used.add(String(photo.id));

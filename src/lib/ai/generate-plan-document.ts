@@ -55,6 +55,11 @@ const aiSchema = z.object({
         .describe(
           "2 à 4 mots ANGLAIS qui désignent ce que l'entreprise vend, au singulier et au pluriel. Ex. chaussettes : [\"sock\", \"socks\"] ; salon de tresses : [\"hair\", \"braids\", \"hairdresser\"] ; boulangerie : [\"bread\", \"bakery\"].",
         ),
+      categorie: z
+        .string()
+        .describe(
+          "1 à 3 mots ANGLAIS pour le type de commerce, plus large et facile à photographier. Ex. chaussettes : « clothing store » ; tresses : « hair salon » ; pain : « bakery ».",
+        ),
       couverture: z.string().describe("L'activité en action : le vendeur ou l'artisan avec le produit, dans sa boutique, son étal ou son atelier."),
       projet: z.string().describe("Le produit ou le service lui-même, bien visible, en gros plan."),
       marche: z.string().describe("Des clients qui achètent ou utilisent ce produit ou ce service."),
@@ -68,6 +73,7 @@ const aiSchema = z.object({
 /** Mots-clés nettoyés et recherches qui nomment toutes le produit ou service vendu. */
 export function photoBrief(photos: {
   motsCles: string[];
+  categorie?: string;
   couverture: string;
   projet: string;
   marche: string;
@@ -85,8 +91,10 @@ export function photoBrief(photos: {
     if (keywords.length === 0 || keywords.some((k) => q.toLowerCase().includes(k))) return q;
     return clean(`${keywords[0]} ${q}`, 80);
   };
+  const category = (photos.categorie ?? "").toLowerCase().replace(/[^a-z\s-]/g, "").trim().slice(0, 40);
   return {
     photoKeywords: keywords,
+    ...(category.length >= 3 ? { photoCategory: category } : {}),
     photoQueries: {
       couverture: withSubject(photos.couverture),
       projet: withSubject(photos.projet),
