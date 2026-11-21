@@ -58,7 +58,7 @@ export async function writeBusinessPlan(projectId: string): Promise<FormState> {
       parsed.data,
       results.realiste,
     );
-    const photos = await findPlanPhotos(out.document.photoQueries ?? {});
+    const photos = await findPlanPhotos(out.document.photoQueries ?? {}, out.document.photoKeywords ?? []);
     await upsertPlanDocument(projectId, { ...out.document, photos });
     await logAiRun({
       projectId,
