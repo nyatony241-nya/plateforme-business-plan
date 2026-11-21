@@ -1,3 +1,4 @@
+import { recommendLegalForm } from "@/lib/creation-guide";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
@@ -36,7 +37,7 @@ export default async function CreateCompanyPage({ params }: PageProps<"/projets/
 
   const [guide, country, saved] = await Promise.all([
     getCreationGuide(project.country_code),
-    getCountryParams(project.country_code),
+    getCountryParams(project.country_code, { legalForm: recommendLegalForm(project).form }),
     getAssumptions(id),
   ]);
 

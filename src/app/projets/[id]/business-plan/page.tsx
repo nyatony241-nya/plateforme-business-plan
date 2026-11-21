@@ -1,3 +1,4 @@
+import { recommendLegalForm } from "@/lib/creation-guide";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -51,7 +52,7 @@ export default async function BusinessPlanPage({
   const [savedAssumptions, savedDocument, country] = await Promise.all([
     getAssumptions(id),
     getPlanDocument(id),
-    getCountryParams(project.country_code),
+    getCountryParams(project.country_code, { legalForm: recommendLegalForm(project).form }),
   ]);
   const creation = await getCreationSummary(project).catch(() => undefined);
   const assumptions = savedAssumptions

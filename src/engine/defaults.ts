@@ -1,7 +1,7 @@
 import type { ScenarioFactors, ScenarioId } from "./types";
 
 /** Version du moteur, enregistrée avec chaque calcul et chaque export. */
-export const ENGINE_VERSION = "1.0.0";
+export const ENGINE_VERSION = "1.1.0";
 
 /**
  * Coefficients par défaut des scénarios, appliqués au scénario réaliste.

@@ -1,4 +1,5 @@
 import "server-only";
+import { recommendLegalForm } from "@/lib/creation-guide";
 import { computeScenarios } from "@/engine";
 import { ASSUMPTIONS_MODEL, generateAssumptions } from "@/lib/ai/generate-assumptions";
 import { toPlanInput } from "@/lib/assumptions";
@@ -27,7 +28,7 @@ export async function planQuotaReached() {
  */
 export async function generateAndSavePlan(project: Project, context: ProjectContextInput): Promise<boolean> {
   await updateProjectContext(project.id, context);
-  const country = await getCountryParams(project.country_code);
+  const country = await getCountryParams(project.country_code, { legalForm: recommendLegalForm(context).form });
   const started = Date.now();
   try {
     const result = await generateAssumptions(

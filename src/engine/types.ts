@@ -17,6 +17,11 @@ export interface CountryParams {
   minimumTaxFloor: number;
   /** Nombre de premiers exercices dispensés du minimum d'impôt (0 = aucune dispense). */
   minimumTaxExemptYears: number;
+  /**
+   * Petites entreprises : sous ce chiffre d'affaires annuel, pas de minimum d'impôt
+   * (régime de l'impôt synthétique libératoire au Gabon). Absent = le minimum s'applique toujours.
+   */
+  minimumTaxExemptBelowRevenue?: number;
   /** Cotisations patronales, chacune avec son plafond mensuel éventuel. */
   employerContributions: EmployerContribution[];
   /** Nombre d'années pendant lesquelles un déficit est reportable (0 = aucun report). */

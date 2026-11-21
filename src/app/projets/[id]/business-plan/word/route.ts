@@ -1,3 +1,4 @@
+import { recommendLegalForm } from "@/lib/creation-guide";
 import { computeScenarios } from "@/engine";
 import { assumptionsSchema, toPlanInput } from "@/lib/assumptions";
 import { planDocumentSchema } from "@/lib/business-plan";
@@ -34,7 +35,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/projets/[id]/bu
   const [savedAssumptions, savedDocument, country] = await Promise.all([
     getAssumptions(id),
     getPlanDocument(id),
-    getCountryParams(project.country_code),
+    getCountryParams(project.country_code, { legalForm: recommendLegalForm(project).form }),
   ]);
   const creation = await getCreationSummary(project).catch(() => undefined);
   const assumptions = savedAssumptions ? assumptionsSchema.safeParse(savedAssumptions.data) : null;

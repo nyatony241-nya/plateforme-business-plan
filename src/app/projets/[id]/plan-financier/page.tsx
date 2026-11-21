@@ -1,3 +1,4 @@
+import { recommendLegalForm } from "@/lib/creation-guide";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -39,7 +40,7 @@ export default async function FinancialPlanPage({ params }: PageProps<"/projets/
   const project = await getMyProject(id);
   if (!project) notFound();
 
-  const [saved, country] = await Promise.all([getAssumptions(id), getCountryParams(project.country_code)]);
+  const [saved, country] = await Promise.all([getAssumptions(id), getCountryParams(project.country_code, { legalForm: recommendLegalForm(project).form })]);
   const parsed = saved ? assumptionsSchema.safeParse(saved.data) : null;
   const initial = parsed?.success ? parsed.data : null;
   const defaults = { budget: project.budget, mode: project.mode, staffing: project.staffing };
