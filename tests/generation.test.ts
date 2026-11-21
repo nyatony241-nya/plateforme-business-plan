@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { computeScenarios } from "@/engine";
 import { buildInstructions, buildPrompt, normalizeAiOutput } from "@/lib/ai/generate-assumptions";
 import { toPlanInput } from "@/lib/assumptions";
+import { ownerIncome } from "@/lib/owner-income";
 import { budgetLabel } from "@/lib/project-options";
 import { projectContextSchema } from "@/lib/validation";
 import { TEST_PARAMS } from "./engine/fixtures";
@@ -110,5 +111,16 @@ describe("choix demandés avant la génération", () => {
   it("affichent la tranche de budget", () => {
     expect(budgetLabel(10_000_000)).toBe("3 à 10 millions FCFA");
     expect(budgetLabel(null)).toBeNull();
+  });
+});
+
+describe("rémunération de l'entrepreneur seul", () => {
+  const year = (netResult: number) => ({ netResult }) as Parameters<typeof ownerIncome>[0][number];
+
+  it("ramène le résultat net à une moyenne mensuelle comparée au salaire minimum", () => {
+    const rows = ownerIncome([year(705_672), year(2_400_000), year(-50_000)], 150_000);
+    expect(rows[0]).toEqual({ year: 1, monthly: 58_806, loss: false, belowMinimum: true });
+    expect(rows[1].belowMinimum).toBe(false);
+    expect(rows[2]).toMatchObject({ monthly: 0, loss: true });
   });
 });

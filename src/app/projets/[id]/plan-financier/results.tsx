@@ -1,8 +1,19 @@
 "use client";
 
 import { CashChart } from "@/components/cash-chart";
-import { SCENARIO_LABEL, type PlanResult, type ScenarioId, type YearSummary } from "@/engine";
-import { formatMonth, formatNumber, formatPercent, formatXaf } from "@/lib/format";
+import {
+  SCENARIO_LABEL,
+  type PlanResult,
+  type ScenarioId,
+  type YearSummary,
+} from "@/engine";
+import {
+  formatMonth,
+  formatNumber,
+  formatPercent,
+  formatXaf,
+} from "@/lib/format";
+import { ownerIncome } from "@/lib/owner-income";
 
 /** Couleurs validées (séparation daltonisme et vision normale) ; étiquetées en bout de courbe. */
 export const SCENARIO_COLOR: Record<ScenarioId, string> = {
@@ -13,9 +24,21 @@ export const SCENARIO_COLOR: Record<ScenarioId, string> = {
 
 const ORDER: ScenarioId[] = ["prudent", "realiste", "optimiste"];
 
-function Kpi({ label, value, detail, alert }: { label: string; value: string; detail?: string; alert?: boolean }) {
+function Kpi({
+  label,
+  value,
+  detail,
+  alert,
+}: {
+  label: string;
+  value: string;
+  detail?: string;
+  alert?: boolean;
+}) {
   return (
-    <div className={`rounded-xl border p-4 ${alert ? "border-danger/40 bg-danger-50" : "border-line bg-surface"}`}>
+    <div
+      className={`rounded-xl border p-4 ${alert ? "border-danger/40 bg-danger-50" : "border-line bg-surface"}`}
+    >
       <p className="text-xs font-semibold text-muted">{label}</p>
       <p className="mt-1 text-lg font-bold tabular-nums text-ink">{value}</p>
       {detail ? <p className="mt-1 text-xs text-ink-soft">{detail}</p> : null}
@@ -23,7 +46,12 @@ function Kpi({ label, value, detail, alert }: { label: string; value: string; de
   );
 }
 
-const LINES: { key: keyof YearSummary; label: string; strong?: boolean; negative?: boolean }[] = [
+const LINES: {
+  key: keyof YearSummary;
+  label: string;
+  strong?: boolean;
+  negative?: boolean;
+}[] = [
   { key: "revenue", label: "Chiffre d'affaires", strong: true },
   { key: "variableCosts", label: "Coûts variables", negative: true },
   { key: "grossMargin", label: "Marge brute", strong: true },
@@ -39,14 +67,65 @@ const LINES: { key: keyof YearSummary; label: string; strong?: boolean; negative
   { key: "cashEnd", label: "Trésorerie en fin d'année", strong: true },
 ];
 
+function OwnerIncome({
+  r,
+  minimumWage,
+  scenario,
+}: {
+  r: PlanResult;
+  minimumWage: number;
+  scenario: ScenarioId;
+}) {
+  const rows = ownerIncome(r.years, minimumWage);
+  const first = rows[0];
+  const alert = first.belowMinimum;
+  return (
+    <section
+      aria-labelledby="remuneration"
+      className={`rounded-xl border p-4 ${alert ? "border-danger/40 bg-danger-50" : "border-forest/30 bg-forest-50"}`}
+    >
+      <h3 id="remuneration" className="font-semibold text-ink">
+        Votre rémunération
+      </h3>
+      <p className="mt-1 text-sm text-ink-soft">
+        Vous travaillez seul, sans salaire prévu : vous vous payez sur le
+        résultat, si la trésorerie le permet. Moyenne par mois, scénario{" "}
+        {SCENARIO_LABEL[scenario].toLowerCase()} :
+      </p>
+      <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm tabular-nums text-ink">
+        {rows.map((row) => (
+          <li key={row.year}>
+            An {row.year} :{" "}
+            <strong>
+              {row.loss ? "aucune (perte)" : formatXaf(row.monthly)}
+            </strong>
+          </li>
+        ))}
+      </ul>
+      <p
+        className={`mt-3 text-sm font-semibold ${alert ? "text-danger" : "text-forest"}`}
+      >
+        {first.loss
+          ? "La première année est en perte : vous ne pourrez pas vous rémunérer."
+          : alert
+            ? `La première année, c'est moins que le salaire minimum retenu (${formatXaf(minimumWage)} par mois).`
+            : `Dès la première année, c'est au moins le salaire minimum retenu (${formatXaf(minimumWage)} par mois).`}
+      </p>
+    </section>
+  );
+}
+
 export function Results({
   results,
   scenario,
   onScenario,
+  owner,
 }: {
   results: Record<ScenarioId, PlanResult>;
   scenario: ScenarioId;
   onScenario: (s: ScenarioId) => void;
+  /** Présent quand l'entrepreneur travaille seul, sans salaire prévu. */
+  owner?: { minimumWage: number };
 }) {
   const r = results[scenario];
   const y1 = r.years[0];
@@ -54,7 +133,11 @@ export function Results({
 
   return (
     <div className="flex flex-col gap-6">
-      <div role="tablist" aria-label="Scénario" className="grid grid-cols-3 gap-1 rounded-xl border border-line bg-paper p-1">
+      <div
+        role="tablist"
+        aria-label="Scénario"
+        className="grid grid-cols-3 gap-1 rounded-xl border border-line bg-paper p-1"
+      >
         {ORDER.map((id) => (
           <button
             key={id}
@@ -62,7 +145,9 @@ export function Results({
             aria-selected={scenario === id}
             onClick={() => onScenario(id)}
             className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
-              scenario === id ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink"
+              scenario === id
+                ? "bg-surface text-ink shadow-sm"
+                : "text-ink-soft hover:text-ink"
             }`}
           >
             {SCENARIO_LABEL[id]}
@@ -70,22 +155,38 @@ export function Results({
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Chiffre d'affaires, an 1" value={formatXaf(y1.revenue)} />
         <Kpi
           label="Résultat net, an 1"
           value={formatXaf(y1.netResult)}
-          detail={y1.grossMarginRate !== null ? `Marge brute ${formatPercent(y1.grossMarginRate)}` : undefined}
+          detail={
+            y1.grossMarginRate !== null
+              ? `Marge brute ${formatPercent(y1.grossMarginRate)}`
+              : undefined
+          }
         />
         <Kpi
           label="Seuil de rentabilité, an 1"
-          value={y1.breakEvenRevenue !== null ? formatXaf(y1.breakEvenRevenue) : "Non calculable"}
+          value={
+            y1.breakEvenRevenue !== null
+              ? formatXaf(y1.breakEvenRevenue)
+              : "Non calculable"
+          }
           detail="Chiffre d'affaires qui couvre toutes les charges"
         />
         <Kpi
           label="Premier mois bénéficiaire"
-          value={r.indicators.breakEvenMonth ? `Mois ${r.indicators.breakEvenMonth}` : "Non atteint"}
-          detail={r.indicators.breakEvenMonth ? monthOf(r.indicators.breakEvenMonth) : "sur la période étudiée"}
+          value={
+            r.indicators.breakEvenMonth
+              ? `Mois ${r.indicators.breakEvenMonth}`
+              : "Non atteint"
+          }
+          detail={
+            r.indicators.breakEvenMonth
+              ? monthOf(r.indicators.breakEvenMonth)
+              : "sur la période étudiée"
+          }
         />
         <Kpi
           label="Besoin de financement"
@@ -100,70 +201,115 @@ export function Results({
             detail={`Trésorerie au plus bas en ${monthOf(r.financing.lowestCashMonth)}`}
           />
         ) : (
-          <Kpi label="Financement manquant" value="Aucun" detail="La trésorerie reste positive" />
+          <Kpi
+            label="Financement manquant"
+            value="Aucun"
+            detail="La trésorerie reste positive"
+          />
         )}
         <Kpi
           label="Délai de récupération"
-          value={r.indicators.paybackMonth ? `${r.indicators.paybackMonth} mois` : "Au-delà de la période"}
+          value={
+            r.indicators.paybackMonth
+              ? `${r.indicators.paybackMonth} mois`
+              : "Au-delà de la période"
+          }
           detail="Mise de départ remboursée par l'activité"
         />
         <Kpi
           label="Rentabilité de l'investissement"
-          value={r.indicators.returnOnInvestment !== null ? formatPercent(r.indicators.returnOnInvestment) : "—"}
+          value={
+            r.indicators.returnOnInvestment !== null
+              ? formatPercent(r.indicators.returnOnInvestment)
+              : "—"
+          }
           detail={`Résultat net cumulé sur ${r.years.length} ans / investissements`}
         />
       </div>
 
-      <div className="rounded-2xl border border-line bg-surface p-4 sm:p-5">
-        <CashChart
-          title="Trésorerie mois par mois"
-          months={r.months.map((m) => m.month)}
-          series={ORDER.map((id) => ({
-            id,
-            label: SCENARIO_LABEL[id],
-            color: SCENARIO_COLOR[id],
-            values: results[id].months.map((m) => m.cash.end),
-          }))}
+      {owner ? (
+        <OwnerIncome
+          r={r}
+          minimumWage={owner.minimumWage}
+          scenario={scenario}
         />
-      </div>
+      ) : null}
 
-      <div className="overflow-x-auto rounded-2xl border border-line bg-surface">
-        <table className="w-full min-w-[520px] text-sm tabular-nums">
-          <caption className="px-4 pt-4 text-left text-sm font-bold text-ink">
-            Compte de résultat prévisionnel · scénario {SCENARIO_LABEL[scenario].toLowerCase()}
-          </caption>
-          <thead>
-            <tr className="border-b border-line text-xs text-muted">
-              <th scope="col" className="px-4 py-3 text-left font-semibold">En FCFA, hors taxes</th>
-              {r.years.map((year) => (
-                <th key={year.year} scope="col" className="px-4 py-3 text-right font-semibold">
-                  An {year.year}
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:items-start">
+        <div className="rounded-2xl border border-line bg-surface p-4 sm:p-5">
+          <CashChart
+            title="Trésorerie mois par mois"
+            months={r.months.map((m) => m.month)}
+            series={ORDER.map((id) => ({
+              id,
+              label: SCENARIO_LABEL[id],
+              color: SCENARIO_COLOR[id],
+              values: results[id].months.map((m) => m.cash.end),
+            }))}
+          />
+        </div>
+
+        <div className="overflow-x-auto rounded-2xl border border-line bg-surface">
+          <table className="w-full min-w-[520px] text-sm tabular-nums">
+            <caption className="px-4 pt-4 text-left text-sm font-bold text-ink">
+              Compte de résultat prévisionnel · scénario{" "}
+              {SCENARIO_LABEL[scenario].toLowerCase()}
+            </caption>
+            <thead>
+              <tr className="border-b border-line text-xs text-muted">
+                <th scope="col" className="px-4 py-3 text-left font-semibold">
+                  En FCFA, hors taxes
                 </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {LINES.filter((line) => line.key !== "setupCosts" || r.years.some((year) => year.setupCosts > 0)).map((line) => (
-              <tr key={line.key} className="border-b border-line/70 last:border-0">
-                <th scope="row" className={`px-4 py-2.5 text-left ${line.strong ? "font-bold text-ink" : "font-normal text-ink-soft"}`}>
-                  {line.label}
-                </th>
-                {r.years.map((year) => {
-                  const value = year[line.key] as number;
-                  return (
-                    <td key={year.year} className={`whitespace-nowrap px-4 py-2.5 text-right ${line.strong ? "font-bold text-ink" : "text-ink-soft"}`}>
-                      {line.negative && value !== 0 ? `−${formatNumber(value)}` : formatNumber(value)}
-                    </td>
-                  );
-                })}
+                {r.years.map((year) => (
+                  <th
+                    key={year.year}
+                    scope="col"
+                    className="px-4 py-3 text-right font-semibold"
+                  >
+                    An {year.year}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {LINES.filter(
+                (line) =>
+                  line.key !== "setupCosts" ||
+                  r.years.some((year) => year.setupCosts > 0),
+              ).map((line) => (
+                <tr
+                  key={line.key}
+                  className="border-b border-line/70 last:border-0"
+                >
+                  <th
+                    scope="row"
+                    className={`px-4 py-2.5 text-left ${line.strong ? "font-bold text-ink" : "font-normal text-ink-soft"}`}
+                  >
+                    {line.label}
+                  </th>
+                  {r.years.map((year) => {
+                    const value = year[line.key] as number;
+                    return (
+                      <td
+                        key={year.year}
+                        className={`whitespace-nowrap px-4 py-2.5 text-right ${line.strong ? "font-bold text-ink" : "text-ink-soft"}`}
+                      >
+                        {line.negative && value !== 0
+                          ? `−${formatNumber(value)}`
+                          : formatNumber(value)}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
       <p className="text-xs text-muted">
-        Calculs faits par le moteur financier v{r.engineVersion}, sans intelligence artificielle. Montants hors taxes ;
-        impôt calculé à la clôture de chaque exercice.
+        Calculs faits par le moteur financier v{r.engineVersion}, sans
+        intelligence artificielle. Montants hors taxes ; impôt calculé à la
+        clôture de chaque exercice.
       </p>
     </div>
   );

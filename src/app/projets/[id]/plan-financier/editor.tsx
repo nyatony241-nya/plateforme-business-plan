@@ -134,6 +134,8 @@ export function PlanEditor({
     }
   }, [a, params]);
 
+  const minimumWage = provenance.find((p) => p.code === "revenu_minimum_mensuel")?.value ?? 150_000;
+
   const set = (changes: Partial<Assumptions>) => setA((prev) => ({ ...prev, ...changes }));
 
   function updateRow<K extends Lists>(key: K, id: string, changes: Partial<Assumptions[K][number]>) {
@@ -173,7 +175,12 @@ export function PlanEditor({
     <div className="flex flex-col gap-8">
       <div id="resultats" className="min-w-0 scroll-mt-6">
         {computed.ok ? (
-          <Results results={computed.results} scenario={scenario} onScenario={setScenario} />
+          <Results
+            results={computed.results}
+            scenario={scenario}
+            onScenario={setScenario}
+            owner={a.staff.length === 0 ? { minimumWage } : undefined}
+          />
         ) : (
           <div role="alert" className="rounded-2xl border border-danger/40 bg-danger-50 p-5 text-sm text-danger">
             {computed.message}
