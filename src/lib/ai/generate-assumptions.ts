@@ -101,6 +101,7 @@ export function buildInstructions(minimumWage: number) {
     "Règles :",
     "- Montants en francs CFA hors taxes, nombres entiers, adaptés au pays, à la ville et au quartier indiqués.",
     "- Tu n'inventes ni statistique, ni enquête, ni source. Tu ne prétends pas connaître le marché local avec précision. Chaque chiffre est un ordre de grandeur prudent, expliqué simplement dans « rationale ».",
+    "- Ne cite aucun nom d'entreprise, de marque, de fournisseur ou d'organisme, sauf l'ANPI-Gabon : écris « électricité et eau », pas le nom d'un fournisseur.",
     "- Préfère la prudence : volumes modestes au démarrage, montée en charge de 3 à 9 mois, coûts complets.",
     `- Aucun salaire brut inférieur à ${minimumWage} FCFA par mois.`,
     "- Si l'entrepreneur travaille seul : aucune ligne de personnel ; sa rémunération viendra du bénéfice.",
