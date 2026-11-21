@@ -95,7 +95,16 @@ export async function searchPhoto(query: string, exclude: Set<string>): Promise<
   return results.find((p) => !exclude.has(String(p.id))) ?? null;
 }
 
-/** Une photo par emplacement ; une recherche qui échoue laisse simplement l'emplacement vide. */
+/** Les photos doivent montrer l'Afrique : on ajoute « african » si la recherche ne le précise pas. */
+export function africanize(query: string) {
+  const q = query.trim();
+  return /\b(africa|african|black)\b/i.test(q) ? q : `african ${q}`;
+}
+
+/**
+ * Une photo par emplacement, adaptée à l'Afrique en priorité ; sans résultat, on reprend la
+ * recherche d'origine. Une recherche qui échoue laisse simplement l'emplacement vide.
+ */
 export async function findPlanPhotos(queries: Partial<Record<PhotoSlot, string>>) {
   const photos: Partial<Record<PhotoSlot, PlanPhoto>> = {};
   if (!photoProvider()) return photos;
@@ -104,7 +113,8 @@ export async function findPlanPhotos(queries: Partial<Record<PhotoSlot, string>>
     const query = queries[slot];
     if (!query) continue;
     try {
-      const photo = await searchPhoto(query, used);
+      const african = africanize(query);
+      const photo = (await searchPhoto(african, used)) ?? (african !== query.trim() ? await searchPhoto(query, used) : null);
       if (photo) {
         photos[slot] = photo;
         used.add(String(photo.id));

@@ -56,7 +56,7 @@ const aiSchema = z.object({
       marketing: z.string(),
     })
     .describe(
-      "Recherches de photos libres de droit, EN ANGLAIS, 2 à 5 mots, une scène concrète et visible (ex. « african woman shopping market », « socks display shop »). Couverture : le produit ou le lieu ; projet : le produit ou le service ; marché : des clients africains ; marketing : un smartphone ou des réseaux sociaux. Aucune marque.",
+      "Recherches de photos libres de droit, EN ANGLAIS, 3 à 6 mots, une scène concrète et visible, qui montre l'Afrique : chaque recherche contient « african » (personnes, commerces, marchés, rues ou intérieurs africains). Exemples : « african woman selling clothes market », « african shop owner counter ». Couverture : le commerce ou l'activité en Afrique ; projet : le produit ou le service avec un vendeur africain ; marché : des clients africains ; marketing : une personne africaine avec un smartphone. Aucune marque.",
     ),
 });
 

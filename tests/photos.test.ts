@@ -112,3 +112,22 @@ describe("export Word illustré", () => {
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/download"))).toBe(true);
   });
 });
+
+describe("photos adaptées à l'Afrique", () => {
+  it("ajoute « african » quand la recherche ne le précise pas", async () => {
+    const { africanize } = await import("@/lib/images/photos");
+    expect(africanize("socks shop")).toBe("african socks shop");
+    expect(africanize("African woman market")).toBe("African woman market");
+  });
+
+  it("cherche d'abord en Afrique, puis la recherche d'origine si rien ne sort", async () => {
+    vi.stubEnv("UNSPLASH_ACCESS_KEY", "cle-unsplash");
+    const fetchMock = vi.fn<(url: string) => Promise<Response>>(async (url) =>
+      Response.json({ results: url.includes("african") ? [] : [unsplashPhoto("z9")] }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const photos = await findPlanPhotos({ couverture: "colorful socks" });
+    expect(fetchMock.mock.calls[0][0]).toContain("african%20colorful%20socks");
+    expect(photos.couverture?.id).toBe("z9");
+  });
+});
