@@ -1,4 +1,5 @@
 import "server-only";
+import { google } from "@ai-sdk/google";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import type { CountryParams } from "@/engine";
@@ -6,8 +7,20 @@ import { assumptionsSchema, INVESTMENT_KINDS, nextMonth, type Assumptions } from
 import type { ParamProvenance } from "@/lib/data/country-params";
 import { budgetLabel } from "@/lib/project-options";
 
-/** Modèle utilisé pour produire les hypothèses (via Vercel AI Gateway), réglable sans redéploiement de code. */
-export const ASSUMPTIONS_MODEL = process.env.AI_MODEL_HYPOTHESES?.trim() || "anthropic/claude-sonnet-5.5";
+/**
+ * Modèle utilisé pour produire les hypothèses, réglable par AI_MODEL_HYPOTHESES.
+ * Avec une clé Gemini (GOOGLE_GENERATIVE_AI_API_KEY), appel direct à Google ;
+ * sinon, passage par Vercel AI Gateway.
+ */
+export const ASSUMPTIONS_MODEL =
+  process.env.AI_MODEL_HYPOTHESES?.trim() ||
+  (process.env.GOOGLE_GENERATIVE_AI_API_KEY ? "google/gemini-3.8-flash" : "anthropic/claude-sonnet-5.5");
+
+/** « google/… » + clé Gemini → API Google directe ; tout autre identifiant → AI Gateway. */
+function resolveModel(id: string) {
+  if (id.startsWith("google/") && process.env.GOOGLE_GENERATIVE_AI_API_KEY) return google(id.slice("google/".length));
+  return id;
+}
 
 export type ProjectContext = {
   name: string;
@@ -232,7 +245,7 @@ export async function generateAssumptions(
   const minimumWage = provenance.find((p) => p.code === "revenu_minimum_mensuel")?.value ?? 150_000;
   const started = Date.now();
   const result = await generateText({
-    model,
+    model: resolveModel(model),
     instructions: buildInstructions(minimumWage),
     prompt: buildPrompt(ctx, params),
     output: Output.object({ schema: aiOutputSchema }),
