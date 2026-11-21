@@ -268,6 +268,12 @@ export async function businessPlanDocx(input: PlanViewInput): Promise<Buffer> {
     ),
     spacer(),
     ...(v.breakdownLine ? [p(`🧮 ${v.breakdownLine}`)] : []),
+    ...(v.references.length > 0
+      ? [
+          h3("📍 Repères locaux utilisés"),
+          ...v.references.map((r) => p(`${r.text}. Source : ${r.source}.`, { size: 18, after: 60 })),
+        ]
+      : []),
     p(`👉 ${v.outlook}`),
 
     h2(6),

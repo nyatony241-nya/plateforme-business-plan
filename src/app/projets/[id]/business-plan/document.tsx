@@ -247,6 +247,17 @@ export function PlanDocumentView(input: PlanViewInput) {
           </div>
         </Sub>
         {v.breakdownLine ? <p>🧮 {v.breakdownLine}</p> : null}
+        {v.references.length > 0 ? (
+          <Sub title="📍 Repères locaux utilisés">
+            <ul className="flex flex-col gap-1.5 text-sm">
+              {v.references.map((r) => (
+                <li key={r.text}>
+                  {r.text}. <span className="text-muted">Source : {r.source}.</span>
+                </li>
+              ))}
+            </ul>
+          </Sub>
+        ) : null}
         <p className="rounded-xl bg-gold-50 px-4 py-3">👉 {v.outlook}</p>
       </Section>
 

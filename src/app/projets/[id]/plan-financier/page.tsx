@@ -88,6 +88,30 @@ export default async function FinancialPlanPage({ params }: PageProps<"/projets/
                     </ul>
                   </div>
                 ) : null}
+                {generation.references && generation.references.length > 0 ? (
+                  <div className="mt-4">
+                    <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-muted">
+                      Repères locaux utilisés
+                    </h2>
+                    <ul className="mt-2 flex flex-col gap-1.5 text-sm leading-relaxed text-ink-soft">
+                      {generation.references.map((r) => (
+                        <li key={r.text} className="flex gap-2">
+                          <span aria-hidden>📍</span>
+                          <span>
+                            {r.text}.{" "}
+                            {r.url ? (
+                              <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-muted underline">
+                                {r.source}
+                              </a>
+                            ) : (
+                              <span className="text-muted">{r.source}</span>
+                            )}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
                 <details className="mt-5 border-t border-line pt-4">
                   <summary className="cursor-pointer text-sm font-semibold text-forest">Regénérer le plan</summary>
                   <p className="mt-2 text-sm text-ink-soft">

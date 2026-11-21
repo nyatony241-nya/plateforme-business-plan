@@ -21,8 +21,13 @@ export function checkPlanCoherence(
   a: Assumptions,
   results: Record<ScenarioId, PlanResult>,
   budget: number | null,
+  context: { mode?: "local" | "en_ligne" | "mixte" | null } = {},
 ): string[] {
   const issues: string[] = [];
+
+  if ((context.mode === "local" || context.mode === "mixte") && !a.fixedCosts.some((c) => /loyer/i.test(c.label))) {
+    issues.push("L'activité se fait dans un local, mais aucun loyer n'est prévu dans les charges mensuelles.");
+  }
 
   for (const o of a.offers) {
     if (o.unitPrice <= 0) continue;

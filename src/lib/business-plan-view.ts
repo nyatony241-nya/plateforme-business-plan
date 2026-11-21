@@ -96,9 +96,12 @@ export function buildPlanView({ doc, a, results, project, minimumWage, creation 
         .join(", ")}.`
     : null;
 
+  const references = (a.generation?.references ?? []).map((r) => ({ text: r.text, source: r.source }));
+
   return {
     title: project.name,
     breakdownLine,
+    references,
     kpis,
     photos: doc.photos ?? {},
     subtitle: [project.sector, [project.district, project.city, project.country].filter(Boolean).join(", ")]
@@ -149,7 +152,9 @@ export function buildPlanView({ doc, a, results, project, minimumWage, creation 
       : [],
     footer:
       (sources.length > 0 ? `Photos fournies par ${sources.join(" et ")}. ` : "") +
-      "Les chiffres de ce document sont des hypothèses proposées automatiquement puis calculées par un moteur financier ; ils ne proviennent pas d'une étude de terrain et doivent être vérifiés. Montants en francs CFA, hors taxes.",
+      (references.length > 0
+        ? "Les loyers, salaires et tarifs s'appuient sur les repères locaux cités (annonces et presse) ; les autres chiffres sont des hypothèses proposées automatiquement puis calculées par un moteur financier. Rien ne remplace une vérification sur le terrain. Montants en francs CFA, hors taxes."
+        : "Les chiffres de ce document sont des hypothèses proposées automatiquement puis calculées par un moteur financier ; ils ne proviennent pas d'une étude de terrain et doivent être vérifiés. Montants en francs CFA, hors taxes."),
   };
 }
 
