@@ -8,6 +8,7 @@ import { computeScenarios } from "@/engine";
 import { assumptionsSchema, toPlanInput } from "@/lib/assumptions";
 import { planDocumentSchema } from "@/lib/business-plan";
 import { getCountryParams } from "@/lib/data/country-params";
+import { getCreationSummary } from "@/lib/data/creation";
 import {
   getAssumptions,
   getMyProject,
@@ -52,6 +53,7 @@ export default async function BusinessPlanPage({
     getPlanDocument(id),
     getCountryParams(project.country_code),
   ]);
+  const creation = await getCreationSummary(project).catch(() => undefined);
   const assumptions = savedAssumptions
     ? assumptionsSchema.safeParse(savedAssumptions.data)
     : null;
@@ -158,6 +160,7 @@ export default async function BusinessPlanPage({
                         country: project.country?.name ?? "Gabon",
                       }}
                       minimumWage={minimumWage}
+                creation={creation}
                     />
                   </td>
                 </tr>

@@ -2,6 +2,7 @@ import { computeScenarios } from "@/engine";
 import { assumptionsSchema, toPlanInput } from "@/lib/assumptions";
 import { planDocumentSchema } from "@/lib/business-plan";
 import { getCountryParams } from "@/lib/data/country-params";
+import { getCreationSummary } from "@/lib/data/creation";
 import { getAssumptions, getMyProject, getPlanDocument } from "@/lib/data/projects";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { businessPlanDocx } from "@/lib/word/business-plan-docx";
@@ -35,6 +36,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/projets/[id]/bu
     getPlanDocument(id),
     getCountryParams(project.country_code),
   ]);
+  const creation = await getCreationSummary(project).catch(() => undefined);
   const assumptions = savedAssumptions ? assumptionsSchema.safeParse(savedAssumptions.data) : null;
   const doc = savedDocument ? planDocumentSchema.safeParse(savedDocument.data) : null;
   if (!assumptions?.success || !doc?.success) {
@@ -53,6 +55,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/projets/[id]/bu
       country: project.country?.name ?? "Gabon",
     },
     minimumWage: country.provenance.find((p) => p.code === "revenu_minimum_mensuel")?.value ?? 150_000,
+    creation,
   });
 
   return new Response(new Uint8Array(buffer), {

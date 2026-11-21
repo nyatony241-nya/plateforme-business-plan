@@ -291,6 +291,7 @@ export async function businessPlanDocx(input: PlanViewInput): Promise<Buffer> {
     ...doc.risques.flatMap((x) => [p(`🔸 ${x.risque}`, { bold: true, after: 40 }), p(`✅ ${x.parade}`, { color: "3F4A45" })]),
 
     h2(8),
+    ...v.creationLines.map((line) => p(`🏛️ ${line}`, { after: 60 })),
     ...doc.demarches.map(
       (d) =>
         new Paragraph({ numbering: { reference: "etapes", level: 0 }, spacing: { after: 60 }, children: [new TextRun(d)] }),

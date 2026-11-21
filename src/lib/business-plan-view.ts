@@ -40,13 +40,15 @@ export type PlanViewInput = {
   results: Record<ScenarioId, PlanResult>;
   project: { name: string; sector: string | null; district: string | null; city: string | null; country: string };
   minimumWage: number;
+  /** Démarches officielles (module « Créer mon entreprise »), quand elles existent pour le pays. */
+  creation?: { form: string; fee: number | null; delay: string | null; website: string | null; phone: string | null };
 };
 
 /**
  * Tout ce que le business plan affiche, déjà calculé et mis en forme.
  * Utilisé à l'identique par la page (et donc le PDF) et par l'export Word.
  */
-export function buildPlanView({ doc, a, results, project, minimumWage }: PlanViewInput) {
+export function buildPlanView({ doc, a, results, project, minimumWage, creation }: PlanViewInput) {
   const r = results.realiste;
   const kind = (k: string) => INVESTMENT_KINDS.find((x) => x.value === k)?.label ?? k;
   const budget = monthlyMarketingBudget(a);
@@ -124,6 +126,18 @@ export function buildPlanView({ doc, a, results, project, minimumWage }: PlanVie
       budget: budget > 0 ? formatXaf(amounts[i]) : "—",
     })),
     marketingWithoutBudget: budget === 0,
+    creationLines: creation
+      ? [
+          `Forme juridique conseillée : ${creation.form}.`,
+          creation.fee !== null
+            ? `Frais de création à l'ANPI : environ ${formatXaf(creation.fee)} (charte officielle, à confirmer au paiement).`
+            : null,
+          creation.delay ? `Délai indicatif : ${creation.delay}.` : null,
+          creation.website
+            ? `Création en ligne : ${creation.website.replace(/^https?:\/\//, "")}${creation.phone ? ` · ${creation.phone}` : ""}.`
+            : null,
+        ].filter((x): x is string => Boolean(x))
+      : [],
     footer:
       (sources.length > 0 ? `Photos fournies par ${sources.join(" et ")}. ` : "") +
       "Les chiffres de ce document sont des hypothèses proposées automatiquement puis calculées par un moteur financier ; ils ne proviennent pas d'une étude de terrain et doivent être vérifiés. Montants en francs CFA, hors taxes.",

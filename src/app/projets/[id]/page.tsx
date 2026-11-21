@@ -109,6 +109,21 @@ export default async function ProjectPage({ params }: PageProps<"/projets/[id]">
           </section>
         )}
 
+        <Link
+          href={`/projets/${project.id}/creer-mon-entreprise`}
+          className="mt-4 flex flex-col gap-4 rounded-2xl border border-line bg-surface p-6 transition-colors hover:border-forest sm:flex-row sm:items-center sm:justify-between"
+        >
+          <span>
+            <span className="block font-display text-2xl font-semibold text-ink">🏛️ Créer mon entreprise</span>
+            <span className="mt-1 block text-ink-soft">
+              Forme juridique conseillée, étapes à l&apos;ANPI, pièces, frais et contacts officiels.
+            </span>
+          </span>
+          <span className="inline-flex shrink-0 items-center justify-center rounded-xl border border-line-strong px-5 py-3 text-[0.95rem] font-semibold text-forest">
+            Ouvrir
+          </span>
+        </Link>
+
       </main>
     </>
   );

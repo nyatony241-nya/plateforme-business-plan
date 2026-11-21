@@ -305,6 +305,13 @@ export function PlanDocumentView(input: PlanViewInput) {
       </Section>
 
       <Section n={8}>
+        {v.creationLines.length > 0 ? (
+          <div className="rounded-xl border border-forest/20 bg-forest-50 px-4 py-3 break-inside-avoid">
+            {v.creationLines.map((line) => (
+              <p key={line}>🏛️ {line}</p>
+            ))}
+          </div>
+        ) : null}
         <ol className="list-decimal pl-5">
           {doc.demarches.map((d) => (
             <li key={d}>{d}</li>
