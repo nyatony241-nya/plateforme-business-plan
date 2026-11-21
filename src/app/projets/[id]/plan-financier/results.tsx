@@ -14,6 +14,7 @@ import {
   formatXaf,
 } from "@/lib/format";
 import { ownerIncome } from "@/lib/owner-income";
+import { salesBreakdown, type BreakdownPart } from "@/lib/sales-breakdown";
 import { SCENARIO_COLOR, SCENARIO_ORDER } from "@/lib/scenario-colors";
 
 const ORDER = SCENARIO_ORDER;
@@ -60,6 +61,47 @@ const LINES: {
   { key: "netResult", label: "Résultat net", strong: true },
   { key: "cashEnd", label: "Trésorerie en fin d'année", strong: true },
 ];
+
+const BREAKDOWN_COLOR: Record<BreakdownPart["key"], string> = {
+  achats: "#a8771f",
+  charges: "#5f6f82",
+  impots: "#aab3bf",
+  benefice: "#0f4d3a",
+};
+
+/** Où vont les ventes de la 1re année : une barre sur 100 FCFA, chaque part nommée. */
+function SalesBreakdown({ r }: { r: PlanResult }) {
+  const b = salesBreakdown(r.years[0]);
+  if (!b) return null;
+  const visible = b.parts.filter((p) => p.share > 0);
+  return (
+    <section aria-labelledby="repartition" className="rounded-xl border border-line bg-surface p-4">
+      <h3 id="repartition" className="text-sm font-semibold text-ink">
+        🧮 Sur 100 FCFA de ventes la 1re année
+      </h3>
+      <div className="mt-3 flex h-4 w-full gap-[2px]" aria-hidden>
+        {visible.map((p) => (
+          <div
+            key={p.key}
+            className="h-full first:rounded-l-full last:rounded-r-full"
+            style={{ width: `${p.share}%`, backgroundColor: BREAKDOWN_COLOR[p.key] }}
+          />
+        ))}
+      </div>
+      <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-ink-soft">
+        {b.parts.map((p) => (
+          <li key={p.key} className="flex items-center gap-1.5">
+            <span aria-hidden className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: BREAKDOWN_COLOR[p.key] }} />
+            {p.label} <strong className="tabular-nums text-ink">{p.share}</strong>
+          </li>
+        ))}
+      </ul>
+      {b.loss > 0 ? (
+        <p className="mt-2 text-sm font-semibold text-danger">Perte de la 1re année : {formatXaf(b.loss)}.</p>
+      ) : null}
+    </section>
+  );
+}
 
 /** Une seule phrase : ce que l'entrepreneur seul pourra se verser la première année. */
 function OwnerIncome({ r, minimumWage }: { r: PlanResult; minimumWage: number }) {
@@ -133,6 +175,8 @@ export function Results({
           {monthOf(r.financing.lowestCashMonth)}).
         </p>
       ) : null}
+
+      <SalesBreakdown r={r} />
 
       {owner ? <OwnerIncome r={r} minimumWage={owner.minimumWage} /> : null}
 

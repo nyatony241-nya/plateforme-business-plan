@@ -1,8 +1,9 @@
 import "server-only";
 import { generateText, Output } from "ai";
 import { z } from "zod";
-import type { CountryParams } from "@/engine";
-import { assumptionsSchema, INVESTMENT_KINDS, nextMonth, type Assumptions } from "@/lib/assumptions";
+import { computeScenarios, type CountryParams } from "@/engine";
+import { assumptionsSchema, INVESTMENT_KINDS, nextMonth, toPlanInput, type Assumptions } from "@/lib/assumptions";
+import { checkPlanCoherence, COHERENCE } from "@/lib/coherence";
 import { DEFAULT_MODEL, resolveModel } from "@/lib/ai/model";
 import type { ParamProvenance } from "@/lib/data/country-params";
 import { budgetLabel } from "@/lib/project-options";
@@ -39,8 +40,13 @@ const aiOutputSchema = z.object({
   offers: z.array(
     z.object({
       label: z.string(),
+      type: z.enum(["produit", "service"]).describe("produit : bien acheté ou fabriqué puis vendu ; service : prestation"),
       unitPrice: z.number().describe("Prix de vente unitaire, FCFA hors taxes"),
-      unitCost: z.number().describe("Coût variable par vente, FCFA hors taxes"),
+      unitCost: z
+        .number()
+        .describe(
+          "Coût variable de cette même unité, FCFA hors taxes : prix d'achat fournisseur (avec transport et douane) pour un produit revendu, matières et consommables pour un service",
+        ),
       monthlyVolume: z.number().describe("Ventes par mois une fois l'activité installée"),
       rampUpMonths: z.number().describe("Mois pour atteindre ce rythme"),
       annualVolumeGrowth: z.number().describe("Croissance annuelle des ventes à partir de l'an 2, en fraction (0,05 = 5 %)"),
@@ -91,6 +97,8 @@ export function buildInstructions(minimumWage: number) {
     "- Tu n'inventes ni statistique, ni enquête, ni source. Tu ne prétends pas connaître le marché local avec précision. Chaque chiffre est un ordre de grandeur prudent, expliqué simplement dans « rationale ».",
     "- Ne cite aucun nom d'entreprise, de marque, de fournisseur ou d'organisme, sauf l'ANPI-Gabon : écris « électricité et eau », pas le nom d'un fournisseur.",
     "- Préfère la prudence : volumes modestes au démarrage, montée en charge de 3 à 9 mois, coûts complets.",
+    "- Prix et coût unitaires portent sur la même unité : pour un pack de 5, le coût est celui des 5 articles. Un produit revendu coûte en général 40 à 70 % de son prix de vente (transport et douane compris s'il est importé) ; jamais moins de 35 %.",
+    "- Les volumes restent cohérents avec le budget : le stock et les achats du premier mois doivent pouvoir être payés.",
     `- Aucun salaire brut inférieur à ${minimumWage} FCFA par mois.`,
     "- Si l'entrepreneur travaille seul : aucune ligne de personnel ; sa rémunération viendra du bénéfice.",
     "- Activité en local : prévois loyer, caution, aménagement, électricité. Activité en ligne : pas de local commercial, mais publicité en ligne et livraison.",
@@ -121,6 +129,22 @@ export function buildPrompt(ctx: ProjectContext, params: CountryParams) {
   return lines.join("\n");
 }
 
+/** Part minimale du coût dans le prix : un produit revendu ne se vend pas à 20 fois son coût. */
+export const MIN_COST_SHARE = { produit: COHERENCE.minProductCostShare, service: 0.05 } as const;
+
+/** Coût unitaire relevé au plancher de vraisemblance ; l'offre corrigée est notée pour avertir. */
+function plausibleUnitCost(
+  o: { label: string; type: "produit" | "service"; unitPrice: number; unitCost: number },
+  adjusted: string[],
+) {
+  const price = clampInt(o.unitPrice, 0, 1e12);
+  const cost = clampInt(o.unitCost, 0, 1e12);
+  const floor = Math.round(price * MIN_COST_SHARE[o.type]);
+  if (cost >= floor) return cost;
+  adjusted.push(o.label.trim().slice(0, 80));
+  return floor;
+}
+
 const clampInt = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, Math.round(Number.isFinite(value) ? value : 0)));
 const clampRate = (value: number, min: number, max: number) =>
@@ -139,6 +163,7 @@ export function normalizeAiOutput(
 ): Assumptions {
   let n = 0;
   const id = (prefix: string) => `${prefix}-${++n}`;
+  const adjusted: string[] = [];
   const kinds = new Set(INVESTMENT_KINDS.map((k) => k.value));
   const depreciable = new Set(INVESTMENT_KINDS.filter((k) => k.depreciable).map((k) => k.value));
 
@@ -164,7 +189,8 @@ export function normalizeAiOutput(
       label: text(o.label, 120),
       note: text(o.rationale, 400),
       unitPrice: clampInt(o.unitPrice, 0, 1e12),
-      unitCost: clampInt(o.unitCost, 0, 1e12),
+      nature: o.type,
+      unitCost: plausibleUnitCost(o, adjusted),
       monthlyVolume: clampInt(o.monthlyVolume, 0, 1e9),
       rampUpMonths: clampInt(o.rampUpMonths, 0, 24),
       annualVolumeGrowth: clampRate(o.annualVolumeGrowth, 0, 0.5),
@@ -208,7 +234,12 @@ export function normalizeAiOutput(
       model: meta.model,
       generatedAt: meta.generatedAt,
       summary: text(out.summary, 1200),
-      warnings: out.warnings.slice(0, 8).map((w) => text(w, 400)),
+      warnings: [
+        ...(adjusted.length > 0
+          ? [`Coût d'achat relevé à un niveau réaliste pour : ${adjusted.join(", ")}. Vérifiez vos prix fournisseurs.`.slice(0, 400)]
+          : []),
+        ...out.warnings.map((w) => text(w, 400)),
+      ].slice(0, 8),
     },
   };
 
@@ -225,6 +256,20 @@ export type GenerationResult = {
 };
 
 /** Appelle l'IA et renvoie des hypothèses validées, prêtes pour le moteur. */
+/** Consigne ajoutée au second essai : ce que le contrôle a trouvé et qu'il faut corriger. */
+export function buildCorrectionPrompt(issues: string[]) {
+  return [
+    "",
+    "ATTENTION : une première proposition contenait ces incohérences. Corrige-les dans ta nouvelle proposition :",
+    ...issues.map((i) => `- ${i}`),
+  ].join("\n");
+}
+
+/**
+ * Appelle l'IA et renvoie des hypothèses validées, prêtes pour le moteur.
+ * Le plan obtenu est calculé puis contrôlé ; en cas d'anomalie, l'IA refait une proposition
+ * en connaissant les anomalies. Ce qui reste douteux est ajouté aux points à vérifier.
+ */
 export async function generateAssumptions(
   ctx: ProjectContext,
   params: CountryParams,
@@ -233,27 +278,47 @@ export async function generateAssumptions(
 ): Promise<GenerationResult> {
   const minimumWage = provenance.find((p) => p.code === "revenu_minimum_mensuel")?.value ?? 150_000;
   const started = Date.now();
-  const result = await generateText({
-    model: resolveModel(model),
-    instructions: buildInstructions(minimumWage),
-    prompt: buildPrompt(ctx, params),
-    output: Output.object({ schema: aiOutputSchema }),
-    maxRetries: 1,
-    timeout: 110_000,
-  });
+  const usage = { inputTokens: 0, outputTokens: 0 };
+  let issues: string[] = [];
+  let assumptions: Assumptions | null = null;
 
-  const assumptions = normalizeAiOutput(result.output, ctx, minimumWage, {
-    model,
-    generatedAt: new Date().toISOString(),
-    startMonth: nextMonth(),
-  });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    // Pas de second essai s'il ne reste pas assez de temps (limite de la fonction : 120 s).
+    if (attempt > 0 && Date.now() - started > 50_000) break;
+    const result = await generateText({
+      model: resolveModel(model),
+      instructions: buildInstructions(minimumWage),
+      prompt: buildPrompt(ctx, params) + (attempt > 0 ? buildCorrectionPrompt(issues) : ""),
+      output: Output.object({ schema: aiOutputSchema }),
+      maxRetries: 1,
+      timeout: 50_000,
+    });
+    usage.inputTokens += result.usage?.inputTokens ?? 0;
+    usage.outputTokens += result.usage?.outputTokens ?? 0;
+
+    assumptions = normalizeAiOutput(result.output, ctx, minimumWage, {
+      model,
+      generatedAt: new Date().toISOString(),
+      startMonth: nextMonth(),
+    });
+    issues = checkPlanCoherence(assumptions, computeScenarios(toPlanInput(assumptions, params)), ctx.budget);
+    if (issues.length === 0) break;
+  }
+
+  // Après deux essais, ce qui reste douteux est signalé en tête des points à vérifier.
+  if (assumptions && issues.length > 0 && assumptions.generation) {
+    assumptions = {
+      ...assumptions,
+      generation: {
+        ...assumptions.generation,
+        warnings: [...issues.map((i) => i.slice(0, 400)), ...assumptions.generation.warnings].slice(0, 8),
+      },
+    };
+  }
 
   return {
-    assumptions,
-    usage: {
-      inputTokens: result.usage?.inputTokens ?? null,
-      outputTokens: result.usage?.outputTokens ?? null,
-    },
+    assumptions: assumptions!,
+    usage,
     durationMs: Date.now() - started,
   };
 }

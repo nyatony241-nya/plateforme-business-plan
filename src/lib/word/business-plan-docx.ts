@@ -267,6 +267,7 @@ export async function businessPlanDocx(input: PlanViewInput): Promise<Buffer> {
       { header: true, numeric: [1, 2] },
     ),
     spacer(),
+    ...(v.breakdownLine ? [p(`🧮 ${v.breakdownLine}`)] : []),
     p(`👉 ${v.outlook}`),
 
     h2(6),

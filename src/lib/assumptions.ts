@@ -45,6 +45,8 @@ export const assumptionsSchema = z.object({
         id: rowId,
         label,
         note,
+        /** produit (acheté ou fabriqué puis vendu) ou service ; sert aux contrôles de cohérence. */
+        nature: z.enum(["produit", "service"]).optional(),
         unitPrice: money,
         unitCost: money,
         monthlyVolume: z.number().min(0).max(1e9),

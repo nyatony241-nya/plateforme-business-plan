@@ -246,6 +246,7 @@ export function PlanDocumentView(input: PlanViewInput) {
             />
           </div>
         </Sub>
+        {v.breakdownLine ? <p>🧮 {v.breakdownLine}</p> : null}
         <p className="rounded-xl bg-gold-50 px-4 py-3">👉 {v.outlook}</p>
       </Section>
 

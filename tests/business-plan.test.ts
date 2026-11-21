@@ -78,3 +78,24 @@ describe("affichage des montants", () => {
     expect(formatXaf(-0.4)).toBe(formatXaf(0));
   });
 });
+
+describe("où vont les ventes", () => {
+  it("répartit 100 FCFA de ventes entre achats, charges, impôts et bénéfice", async () => {
+    const { salesBreakdown } = await import("@/lib/sales-breakdown");
+    const year = {
+      revenue: 1000, variableCosts: 520, staffCost: 100, fixedCosts: 80, setupCosts: 10, depreciation: 10, interest: 0,
+      incomeTax: 84, netResult: 196,
+    } as Parameters<typeof salesBreakdown>[0];
+    const b = salesBreakdown(year)!;
+    expect(b.parts.map((p) => p.share)).toEqual([52, 20, 8, 20]);
+    expect(b.parts.reduce((t, p) => t + p.share, 0)).toBe(100);
+    expect(b.loss).toBe(0);
+  });
+
+  it("isole la perte", async () => {
+    const { salesBreakdown } = await import("@/lib/sales-breakdown");
+    const b = salesBreakdown({ revenue: 1000, variableCosts: 600, staffCost: 300, fixedCosts: 200, setupCosts: 0, depreciation: 0, interest: 0, incomeTax: 0, netResult: -100 } as Parameters<typeof salesBreakdown>[0])!;
+    expect(b.loss).toBe(100);
+    expect(b.parts.find((p) => p.key === "benefice")!.share).toBe(0);
+  });
+});

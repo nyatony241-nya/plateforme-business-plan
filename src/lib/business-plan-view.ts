@@ -4,6 +4,7 @@ import { PHOTO_SOURCES, monthlyMarketingBudget, splitBudget, type PlanDocument, 
 import { formatDateFr } from "@/lib/data-status";
 import { formatMonth, formatXaf } from "@/lib/format";
 import { ownerIncome } from "@/lib/owner-income";
+import { salesBreakdown } from "@/lib/sales-breakdown";
 
 /** Titres des parties, avec leur émoticône (même ordre que le document). */
 export const SECTIONS = [
@@ -88,8 +89,16 @@ export function buildPlanView({ doc, a, results, project, minimumWage, creation 
     { emoji: "🎯", label: "Rentable dès", value: be ? formatMonth(r.months[be - 1].month) : "Après 3 ans" },
   ];
 
+  const breakdown = salesBreakdown(r.years[0]);
+  const breakdownLine = breakdown
+    ? `Sur 100 FCFA de ventes la 1re année (scénario réaliste) : ${breakdown.parts
+        .map((p) => `${p.share} ${p.key === "benefice" ? "de bénéfice" : p.key === "impots" ? "d'impôts" : p.key === "achats" ? "d'achats" : "de charges"}`)
+        .join(", ")}.`
+    : null;
+
   return {
     title: project.name,
+    breakdownLine,
     kpis,
     photos: doc.photos ?? {},
     subtitle: [project.sector, [project.district, project.city, project.country].filter(Boolean).join(", ")]

@@ -21,6 +21,7 @@ function aiOutput() {
     offers: [
       {
         label: "Paire de chaussettes",
+        type: "produit" as "produit" | "service",
         unitPrice: 2_500,
         unitCost: 1_000,
         monthlyVolume: 600,
@@ -64,6 +65,18 @@ describe("normalisation de la réponse de l'IA", () => {
     const results = computeScenarios(toPlanInput(a, TEST_PARAMS));
     expect(results.realiste.years[0].revenue).toBeGreaterThan(0);
     expect(results.prudent.years[0].revenue).toBeLessThan(results.realiste.years[0].revenue);
+  });
+
+  it("relève un coût d'achat invraisemblable et le signale", () => {
+    const out = aiOutput();
+    out.offers = [
+      { ...out.offers[0], label: "Pack de 5 paires de marque", unitPrice: 10_000, unitCost: 500 },
+      { ...out.offers[0], label: "Retouche", type: "service" as const, unitPrice: 2_000, unitCost: 300 },
+    ];
+    const r = normalizeAiOutput(out, { budget: 3_000_000 }, 150_000, meta);
+    expect(r.offers[0].unitCost).toBe(3_500); // 35 % du prix pour un produit revendu
+    expect(r.offers[1].unitCost).toBe(300); // service : coût faible accepté
+    expect(r.generation?.warnings[0]).toContain("Pack de 5 paires de marque");
   });
 
   it("refuse une réponse sans aucune vente", () => {
