@@ -89,7 +89,7 @@ export function CreationGuideView({ project, guide, provenance, revenue1 }: Crea
               <p className="mt-2 text-ink-soft">{reason}</p>
               {creationFee ? (
                 <p className="mt-3 text-ink">
-                  💰 Frais de création : environ <strong>{formatXaf(creationFee.gabonais)}</strong> pour un Gabonais (
+                  💰 Frais de création : <strong>{formatXaf(creationFee.gabonais)}</strong> pour un Gabonais (
                   {formatXaf(creationFee.non_gabonais)} pour un non-Gabonais).
                 </p>
               ) : null}
@@ -296,7 +296,7 @@ export function CreationGuideView({ project, guide, provenance, revenue1 }: Crea
                       </ul>
                       {p.details.frais[0] ? (
                         <p className="mt-3 text-sm">
-                          💰 Création : environ {formatXaf(p.details.frais[0].gabonais)} (Gabonais)
+                          💰 Création : {formatXaf(p.details.frais[0].gabonais)} (Gabonais)
                         </p>
                       ) : null}
                     </div>
