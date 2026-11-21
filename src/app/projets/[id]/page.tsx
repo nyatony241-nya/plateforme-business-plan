@@ -16,10 +16,6 @@ export const maxDuration = 120;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const prochainesEtapes = [
-  { title: "Assistant de cadrage", text: "Questions ciblées pour compléter votre idée." },
-  { title: "Rédaction et export", text: "Plan complet, export PDF et Word." },
-];
 
 export default async function ProjectPage({ params }: PageProps<"/projets/[id]">) {
   const { id } = await params;
@@ -79,6 +75,22 @@ export default async function ProjectPage({ params }: PageProps<"/projets/[id]">
               Ouvrir
             </span>
           </Link>
+        ) : null}
+        {saved ? (
+          <Link
+            href={`/projets/${project.id}/business-plan`}
+            className="mt-4 flex flex-col gap-4 rounded-2xl border border-line bg-surface p-6 transition-colors hover:border-forest sm:flex-row sm:items-center sm:justify-between"
+          >
+            <span>
+              <span className="block font-display text-2xl font-semibold text-ink">Business plan</span>
+              <span className="mt-1 block text-ink-soft">
+                Le document complet, rédigé à partir du plan financier, à télécharger en PDF.
+              </span>
+            </span>
+            <span className="inline-flex shrink-0 items-center justify-center rounded-xl border border-line-strong px-5 py-3 text-[0.95rem] font-semibold text-forest">
+              Ouvrir
+            </span>
+          </Link>
         ) : (
           <section aria-labelledby="generer" className="mt-8 rounded-2xl border border-forest/30 bg-forest-50 p-6">
             <h2 id="generer" className="font-display text-2xl font-semibold text-ink">
@@ -97,20 +109,6 @@ export default async function ProjectPage({ params }: PageProps<"/projets/[id]">
           </section>
         )}
 
-        <section className="mt-10" aria-labelledby="etapes">
-          <h2 id="etapes" className="font-display text-2xl font-semibold text-ink">
-            Prochaines étapes
-          </h2>
-          <ul className="mt-5 grid gap-4 sm:grid-cols-2">
-            {prochainesEtapes.map((step) => (
-              <li key={step.title} className="rounded-2xl border border-dashed border-line-strong p-5">
-                <p className="font-bold text-ink">{step.title}</p>
-                <p className="mt-2 text-sm leading-relaxed text-ink-soft">{step.text}</p>
-                <p className="mt-3 text-xs font-semibold uppercase tracking-[0.12em] text-gold">Bientôt</p>
-              </li>
-            ))}
-          </ul>
-        </section>
       </main>
     </>
   );

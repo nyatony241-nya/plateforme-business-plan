@@ -1,26 +1,14 @@
 import "server-only";
-import { google } from "@ai-sdk/google";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import type { CountryParams } from "@/engine";
 import { assumptionsSchema, INVESTMENT_KINDS, nextMonth, type Assumptions } from "@/lib/assumptions";
+import { DEFAULT_MODEL, resolveModel } from "@/lib/ai/model";
 import type { ParamProvenance } from "@/lib/data/country-params";
 import { budgetLabel } from "@/lib/project-options";
 
-/**
- * Modèle utilisé pour produire les hypothèses, réglable par AI_MODEL_HYPOTHESES.
- * Avec une clé Gemini (GOOGLE_GENERATIVE_AI_API_KEY), appel direct à Google ;
- * sinon, passage par Vercel AI Gateway.
- */
-export const ASSUMPTIONS_MODEL =
-  process.env.AI_MODEL_HYPOTHESES?.trim() ||
-  (process.env.GOOGLE_GENERATIVE_AI_API_KEY ? "google/gemini-3.8-flash" : "anthropic/claude-sonnet-5.5");
-
-/** « google/… » + clé Gemini → API Google directe ; tout autre identifiant → AI Gateway. */
-function resolveModel(id: string) {
-  if (id.startsWith("google/") && process.env.GOOGLE_GENERATIVE_AI_API_KEY) return google(id.slice("google/".length));
-  return id;
-}
+/** Modèle utilisé pour produire les hypothèses. */
+export const ASSUMPTIONS_MODEL = DEFAULT_MODEL;
 
 export type ProjectContext = {
   name: string;
@@ -91,8 +79,8 @@ const aiOutputSchema = z.object({
 
 type AiOutput = z.infer<typeof aiOutputSchema>;
 
-const MODE_LABEL = { local: "dans un local commercial", en_ligne: "en ligne, sans local commercial", mixte: "avec un local et en ligne" };
-const STAFF_LABEL = { seul: "seul, sans salarié au départ", recruter: "avec du personnel" };
+export const MODE_LABEL = { local: "dans un local commercial", en_ligne: "en ligne, sans local commercial", mixte: "avec un local et en ligne" };
+export const STAFF_LABEL = { seul: "seul, sans salarié au départ", recruter: "avec du personnel" };
 
 export function buildInstructions(minimumWage: number) {
   return [

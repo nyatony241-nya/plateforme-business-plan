@@ -3,7 +3,7 @@ import { BrandLink } from "@/components/brand";
 /** En-tête de l'espace connecté. Sans nom (base non raccordée), pas de déconnexion. */
 export function AppHeader({ name }: { name?: string | null }) {
   return (
-    <header className="border-b border-line bg-surface">
+    <header className="border-b border-line bg-surface print:hidden">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
         <BrandLink href={name ? "/tableau-de-bord" : "/"} />
         {name ? (

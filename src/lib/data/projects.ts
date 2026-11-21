@@ -152,3 +152,26 @@ export async function countMyAiRunsSince(since: Date, purpose: string) {
   if (error) throw new Error(`Lecture du journal impossible : ${error.message}`);
   return count ?? 0;
 }
+
+/** Business plan rédigé du projet (null s'il n'a pas encore été rédigé). */
+export async function getPlanDocument(projectId: string): Promise<{ data: unknown; updatedAt: string } | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("business_plans")
+    .select("data, updated_at")
+    .eq("project_id", projectId)
+    .maybeSingle();
+  if (error) throw new Error(`Lecture du business plan impossible : ${error.message}`);
+  return data ? { data: data.data, updatedAt: data.updated_at as string } : null;
+}
+
+export async function upsertPlanDocument(projectId: string, data: unknown) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("business_plans")
+    .upsert(
+      { project_id: projectId, schema_version: 1, data, updated_at: new Date().toISOString() },
+      { onConflict: "project_id" },
+    );
+  if (error) throw new Error(`Enregistrement du business plan impossible : ${error.message}`);
+}
