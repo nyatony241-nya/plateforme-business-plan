@@ -107,7 +107,7 @@ export async function insertProject(input: NewProjectInput): Promise<string> {
 
 /** Trace un appel à l'IA (coût et durée suivis par utilisateur). Ne bloque jamais l'utilisateur. */
 export async function logAiRun(run: {
-  projectId: string;
+  projectId: string | null;
   purpose: string;
   model: string;
   status: "succes" | "echec";

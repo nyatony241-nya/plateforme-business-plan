@@ -76,3 +76,10 @@ export function formDataToObject(formData: FormData, keys: readonly string[]) {
   }
   return values;
 }
+
+/** Projet créé par l'assistant : l'idée, ce qu'il en a compris, et les choix complétés. */
+export const assistantProjectSchema = newProjectSchema
+  .extend({ idea: z.string().trim().min(10, "Décrivez votre idée en une phrase au moins.").max(2000) })
+  .and(projectContextSchema);
+
+export type AssistantProjectInput = z.infer<typeof assistantProjectSchema>;

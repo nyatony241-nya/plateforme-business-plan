@@ -8,9 +8,11 @@ import { listMyProjects, listPilotCities } from "@/lib/data/projects";
 import { formatDateFr } from "@/lib/data-status";
 import { isSupabaseConfigured } from "@/lib/env";
 import { getCurrentUser } from "@/lib/supabase/server";
-import { NewProjectForm } from "./new-project-form";
+import { IdeaAssistant } from "./idea-assistant";
 
 export const metadata: Metadata = { title: "Mes projets" };
+/** Créer un projet lance aussi la génération du plan (IA + calcul), jusqu'à une minute. */
+export const maxDuration = 120;
 
 export default async function DashboardPage() {
   if (!isSupabaseConfigured) {
@@ -40,7 +42,7 @@ export default async function DashboardPage() {
           </h1>
           {projects.length === 0 ? (
             <p className="mt-4 text-ink-soft">
-              Aucun projet pour l&apos;instant. Créez le premier avec le formulaire.
+              Aucun projet pour l&apos;instant. Décrivez votre idée : la plateforme s&apos;occupe du reste.
             </p>
           ) : (
             <ul className="mt-6 flex flex-col gap-3">
@@ -70,10 +72,10 @@ export default async function DashboardPage() {
               Nouveau projet
             </h2>
             <p className="mt-2 text-ink-soft">
-              Pilote ouvert à Libreville, Akanda et Owendo.
+              Quelques phrases suffisent. Pilote ouvert à Libreville, Akanda et Owendo.
             </p>
             <div className="mt-6">
-              <NewProjectForm cities={cities} />
+              <IdeaAssistant cities={cities} />
             </div>
           </Card>
         </section>
