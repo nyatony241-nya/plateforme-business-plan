@@ -4,12 +4,15 @@ import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
 import { ConfigNotice } from "@/components/config-notice";
 import { Card } from "@/components/ui";
-import { getMyProject } from "@/lib/data/projects";
+import { getAssumptions, getMyProject } from "@/lib/data/projects";
 import { formatDateFr } from "@/lib/data-status";
 import { isSupabaseConfigured } from "@/lib/env";
 import { getCurrentUser } from "@/lib/supabase/server";
+import { GenerateForm } from "./generate-form";
 
 export const metadata: Metadata = { title: "Projet" };
+/** La génération automatique (IA + calcul) peut prendre jusqu'à une minute. */
+export const maxDuration = 120;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -37,6 +40,7 @@ export default async function ProjectPage({ params }: PageProps<"/projets/[id]">
 
   const project = await getMyProject(id);
   if (!project) notFound();
+  const saved = await getAssumptions(id);
 
   return (
     <>
@@ -60,20 +64,38 @@ export default async function ProjectPage({ params }: PageProps<"/projets/[id]">
           </Card>
         ) : null}
 
-        <Link
-          href={`/projets/${project.id}/plan-financier`}
-          className="mt-8 flex flex-col gap-4 rounded-2xl border border-forest/30 bg-forest-50 p-6 transition-colors hover:border-forest sm:flex-row sm:items-center sm:justify-between"
-        >
-          <span>
-            <span className="block font-display text-2xl font-semibold text-ink">Plan financier</span>
-            <span className="mt-1 block text-ink-soft">
-              Investissements, ventes, personnel, charges, financement : trois scénarios calculés sur 3 ou 5 ans.
+        {saved ? (
+          <Link
+            href={`/projets/${project.id}/plan-financier`}
+            className="mt-8 flex flex-col gap-4 rounded-2xl border border-forest/30 bg-forest-50 p-6 transition-colors hover:border-forest sm:flex-row sm:items-center sm:justify-between"
+          >
+            <span>
+              <span className="block font-display text-2xl font-semibold text-ink">Plan financier</span>
+              <span className="mt-1 block text-ink-soft">
+                Prêt : trois scénarios calculés, avec l&apos;explication de chaque chiffre.
+              </span>
             </span>
-          </span>
-          <span className="inline-flex shrink-0 items-center justify-center rounded-xl bg-forest px-5 py-3 text-[0.95rem] font-semibold text-white">
-            Ouvrir
-          </span>
-        </Link>
+            <span className="inline-flex shrink-0 items-center justify-center rounded-xl bg-forest px-5 py-3 text-[0.95rem] font-semibold text-white">
+              Ouvrir
+            </span>
+          </Link>
+        ) : (
+          <section aria-labelledby="generer" className="mt-8 rounded-2xl border border-forest/30 bg-forest-50 p-6">
+            <h2 id="generer" className="font-display text-2xl font-semibold text-ink">
+              Votre plan financier en une minute
+            </h2>
+            <p className="mt-1 max-w-2xl text-ink-soft">
+              Trois réponses, et la plateforme construit tout : investissements, prix, ventes, charges, personnel,
+              financement, puis trois scénarios sur 3 ans.
+            </p>
+            <div className="mt-5">
+              <GenerateForm
+                projectId={project.id}
+                defaults={{ budget: project.budget, mode: project.mode, staffing: project.staffing }}
+              />
+            </div>
+          </section>
+        )}
 
         <section className="mt-10" aria-labelledby="etapes">
           <h2 id="etapes" className="font-display text-2xl font-semibold text-ink">

@@ -51,9 +51,24 @@ function Section({
   );
 }
 
-function Row({ children, onRemove }: { children: ReactNode; onRemove: () => void }) {
+function Note({ text }: { text?: string }) {
+  if (!text) return null;
+  return (
+    <p className="flex items-start gap-2 text-xs leading-relaxed text-ink-soft">
+      <StatusBadge status="hypothese" />
+      <span>{text}</span>
+    </p>
+  );
+}
+
+function Row({ children, onRemove, note }: { children: ReactNode; onRemove: () => void; note?: string }) {
   return (
     <div className="rounded-xl border border-line bg-paper/60 p-4">
+      {note ? (
+        <div className="mb-3">
+          <Note text={note} />
+        </div>
+      ) : null}
       <div className="grid grid-cols-2 gap-3">{children}</div>
       <button type="button" onClick={onRemove} className="mt-3 text-xs font-semibold text-ink-soft hover:text-danger">
         Retirer cette ligne
@@ -87,6 +102,7 @@ export function PlanEditor({
   const [a, setA] = useState<Assumptions>(initial);
   const [scenario, setScenario] = useState<ScenarioId>("realiste");
   const [save, setSave] = useState<SaveState>({ state: "idle", at: initialSavedAt });
+  const [editing, setEditing] = useState(!initial.generation);
   const firstRender = useRef(true);
   const requestId = useRef(0);
 
@@ -154,11 +170,39 @@ export function PlanEditor({
             : "Rien d'enregistré pour l'instant";
 
   return (
-    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-start">
-      <div className="flex min-w-0 flex-col gap-5">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-hyp-50 px-4 py-3">
+    <div className="flex flex-col gap-8">
+      <div id="resultats" className="min-w-0 scroll-mt-6">
+        {computed.ok ? (
+          <Results results={computed.results} scenario={scenario} onScenario={setScenario} />
+        ) : (
+          <div role="alert" className="rounded-2xl border border-danger/40 bg-danger-50 p-5 text-sm text-danger">
+            {computed.message}
+          </div>
+        )}
+      </div>
+
+      <details
+        className="group rounded-2xl border border-line bg-surface"
+        open={editing}
+        onToggle={(event) => setEditing(event.currentTarget.open)}
+      >
+        <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 p-5 sm:p-6 [&::-webkit-details-marker]:hidden">
+          <span className="min-w-0">
+            <span className="block font-display text-2xl font-semibold text-ink">Hypothèses du plan</span>
+            <span className="mt-1 block max-w-2xl text-sm text-ink-soft">
+              Chaque chiffre est expliqué. Vous pouvez en corriger un, facultativement : les résultats se recalculent
+              aussitôt.
+            </span>
+          </span>
+          <span className="shrink-0 rounded-xl border border-line-strong px-4 py-2 text-sm font-semibold text-forest">
+            {editing ? "Masquer" : "Voir et corriger"}
+          </span>
+        </summary>
+      <div className="grid min-w-0 grid-cols-1 gap-5 border-t border-line p-5 sm:p-6 lg:grid-cols-2 lg:items-start">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-hyp-50 px-4 py-3 lg:col-span-2">
           <p className="flex items-center gap-2 text-sm text-ink-soft">
-            <StatusBadge status="hypothese" /> Les montants saisis ici sont vos hypothèses.
+            <StatusBadge status="hypothese" /> Proposés automatiquement, à vérifier. Corrigez un chiffre si vous connaissez
+            le vrai.
           </p>
           <p aria-live="polite" className={`text-xs font-semibold ${save.state === "error" ? "text-danger" : "text-muted"}`}>
             {saveText}
@@ -197,7 +241,7 @@ export function PlanEditor({
           addLabel="Ajouter un produit ou un service"
         >
           {a.offers.map((o) => (
-            <Row key={o.id} onRemove={() => removeRow("offers", o.id)}>
+            <Row key={o.id} note={o.note} onRemove={() => removeRow("offers", o.id)}>
               <div className={wide}>
                 <TextInput label="Produit ou service" value={o.label} placeholder="Ex. coupe homme" onChange={(label) => updateRow("offers", o.id, { label })} />
               </div>
@@ -220,7 +264,7 @@ export function PlanEditor({
           {a.investments.map((inv) => {
             const kind = INVESTMENT_KINDS.find((k) => k.value === inv.kind);
             return (
-              <Row key={inv.id} onRemove={() => removeRow("investments", inv.id)}>
+              <Row key={inv.id} note={inv.note} onRemove={() => removeRow("investments", inv.id)}>
                 <div className={wide}>
                   <TextInput label="Description" value={inv.label} placeholder="Ex. fauteuils, miroirs" onChange={(label) => updateRow("investments", inv.id, { label })} />
                 </div>
@@ -247,7 +291,7 @@ export function PlanEditor({
         >
           {a.staff.length === 0 ? <p className="text-sm text-muted">Aucun salarié pour l&apos;instant.</p> : null}
           {a.staff.map((s) => (
-            <Row key={s.id} onRemove={() => removeRow("staff", s.id)}>
+            <Row key={s.id} note={s.note} onRemove={() => removeRow("staff", s.id)}>
               <div className={wide}>
                 <TextInput label="Poste" value={s.label} placeholder="Ex. coiffeuse" onChange={(label) => updateRow("staff", s.id, { label })} />
               </div>
@@ -265,7 +309,7 @@ export function PlanEditor({
           addLabel="Ajouter une charge"
         >
           {a.fixedCosts.map((c) => (
-            <Row key={c.id} onRemove={() => removeRow("fixedCosts", c.id)}>
+            <Row key={c.id} note={c.note} onRemove={() => removeRow("fixedCosts", c.id)}>
               <div className={wide}>
                 <TextInput label="Charge" value={c.label} placeholder="Ex. électricité, internet, marketing" onChange={(label) => updateRow("fixedCosts", c.id, { label })} />
               </div>
@@ -292,6 +336,7 @@ export function PlanEditor({
           }
           addLabel="Ajouter un prêt"
         >
+          <Note text={a.financing.note} />
           <div className="grid grid-cols-2 gap-3">
             <AmountInput label="Apport personnel" value={a.financing.equity} onChange={(equity) => set({ financing: { ...a.financing, equity } })} />
             <AmountInput label="Subventions et dons" value={a.financing.grants} onChange={(grants) => set({ financing: { ...a.financing, grants } })} />
@@ -299,6 +344,7 @@ export function PlanEditor({
           {a.financing.loans.map((loan) => (
             <Row
               key={loan.id}
+              note={loan.note}
               onRemove={() => set({ financing: { ...a.financing, loans: a.financing.loans.filter((l) => l.id !== loan.id) } })}
             >
               <div className={wide}>
@@ -330,6 +376,9 @@ export function PlanEditor({
             />
           </div>
         </Section>
+
+        </div>
+      </details>
 
         <details className="rounded-2xl border border-line bg-surface p-5 sm:p-6">
           <summary className="cursor-pointer font-display text-xl font-semibold text-ink">
@@ -365,22 +414,11 @@ export function PlanEditor({
             ))}
           </ul>
         </details>
-      </div>
 
-      <div id="resultats" className="min-w-0 scroll-mt-6 lg:sticky lg:top-6">
-        {computed.ok ? (
-          <Results results={computed.results} scenario={scenario} onScenario={setScenario} />
-        ) : (
-          <div role="alert" className="rounded-2xl border border-danger/40 bg-danger-50 p-5 text-sm text-danger">
-            {computed.message}
-          </div>
-        )}
-      </div>
-
-      {computed.ok ? (
+      {computed.ok && editing ? (
         <a
           href="#resultats"
-          className="fixed inset-x-3 bottom-3 z-20 flex items-center justify-between gap-3 rounded-2xl bg-forest px-4 py-3 text-white shadow-lg lg:hidden"
+          className="fixed inset-x-3 bottom-3 z-20 mx-auto flex max-w-3xl items-center justify-between gap-3 rounded-2xl bg-forest px-4 py-3 text-white shadow-lg"
         >
           <span className="text-sm">
             Résultat net an 1

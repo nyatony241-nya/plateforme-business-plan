@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import type { NewProjectInput } from "@/lib/validation";
+import type { NewProjectInput, ProjectContextInput } from "@/lib/validation";
 
 export type City = { id: string; name: string; region: string | null };
 
@@ -18,6 +18,10 @@ export type ProjectSummary = {
 export type Project = ProjectSummary & {
   idea: string | null;
   country_code: string;
+  budget: number | null;
+  mode: "local" | "en_ligne" | "mixte" | null;
+  staffing: "seul" | "recruter" | null;
+  country: { name: string } | null;
 };
 
 const SUMMARY_COLUMNS =
@@ -52,7 +56,7 @@ export async function getMyProject(id: string): Promise<Project | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("projects")
-    .select(`${SUMMARY_COLUMNS}, idea, country_code`)
+    .select(`${SUMMARY_COLUMNS}, idea, country_code, budget, mode, staffing, country:countries(name)`)
     .eq("id", id)
     .maybeSingle<Project>();
   if (error) throw new Error(`Lecture du projet impossible : ${error.message}`);
@@ -99,4 +103,52 @@ export async function insertProject(input: NewProjectInput): Promise<string> {
     .single();
   if (error) throw new Error(`Création du projet impossible : ${error.message}`);
   return data.id as string;
+}
+
+/** Trace un appel à l'IA (coût et durée suivis par utilisateur). Ne bloque jamais l'utilisateur. */
+export async function logAiRun(run: {
+  projectId: string;
+  purpose: string;
+  model: string;
+  status: "succes" | "echec";
+  durationMs: number;
+  inputTokens: number | null;
+  outputTokens: number | null;
+}) {
+  try {
+    const supabase = await createClient();
+    await supabase.from("ai_runs").insert({
+      project_id: run.projectId,
+      purpose: run.purpose,
+      model: run.model,
+      status: run.status,
+      duration_ms: run.durationMs,
+      input_tokens: run.inputTokens,
+      output_tokens: run.outputTokens,
+    });
+  } catch {
+    // Le journal ne doit pas faire échouer la génération.
+  }
+}
+
+/** Enregistre le budget, le lieu de vente et l'organisation choisis. */
+export async function updateProjectContext(projectId: string, input: ProjectContextInput) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("projects")
+    .update({ budget: input.budget, mode: input.mode, staffing: input.staffing })
+    .eq("id", projectId);
+  if (error) throw new Error(`Mise à jour du projet impossible : ${error.message}`);
+}
+
+/** Nombre de générations lancées par l'utilisateur depuis une date. */
+export async function countMyAiRunsSince(since: Date, purpose: string) {
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from("ai_runs")
+    .select("id", { count: "exact", head: true })
+    .eq("purpose", purpose)
+    .gte("created_at", since.toISOString());
+  if (error) throw new Error(`Lecture du journal impossible : ${error.message}`);
+  return count ?? 0;
 }
