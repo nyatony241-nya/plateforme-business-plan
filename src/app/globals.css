@@ -46,13 +46,68 @@ body {
   outline-offset: 2px;
 }
 
-/* Impression et PDF : A4, fond blanc, couleurs conservées. */
+/*
+ * Impression et PDF : A4, fond blanc, couleurs conservées.
+ * Marge de page nulle : le navigateur n'imprime plus l'adresse, la date ni le titre.
+ * Les marges du document viennent du cadre .print-frame : un tableau dont l'en-tête et
+ * le pied vides se répètent sur chaque page (marges haute et basse), et dont la cellule
+ * porte les marges gauche et droite. À l'écran, ce cadre se comporte comme un simple bloc.
+ */
 @page {
   size: A4;
-  margin: 18mm 16mm;
+  margin: 0;
+}
+
+.print-frame,
+.print-frame > tbody,
+.print-frame > tbody > tr,
+.print-frame > tbody > tr > td {
+  display: block;
+}
+
+.print-frame > thead,
+.print-frame > tfoot {
+  display: none;
 }
 
 @media print {
+  .print-frame {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+  }
+
+  .print-frame > thead {
+    display: table-header-group;
+  }
+
+  .print-frame > tfoot {
+    display: table-footer-group;
+  }
+
+  .print-frame > tbody {
+    display: table-row-group;
+  }
+
+  .print-frame > thead > tr,
+  .print-frame > tbody > tr,
+  .print-frame > tfoot > tr {
+    display: table-row;
+  }
+
+  .print-frame > thead > tr > td,
+  .print-frame > tbody > tr > td,
+  .print-frame > tfoot > tr > td {
+    display: table-cell;
+    padding: 0 16mm;
+  }
+
+  .print-frame > thead > tr > td > div,
+  .print-frame > tfoot > tr > td > div {
+    height: 15mm;
+  }
+
   html,
   body {
     background: #fff !important;
