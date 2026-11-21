@@ -3,9 +3,9 @@ import { unzipSync, strFromU8 } from "fflate";
 import { describe, expect, it } from "vitest";
 import { computeScenarios } from "@/engine";
 import { defaultAssumptions, toPlanInput, type Assumptions } from "@/lib/assumptions";
-import type { PlanDocument } from "@/lib/business-plan";
 import { businessPlanDocx } from "@/lib/word/business-plan-docx";
 import { TEST_PARAMS } from "./engine/fixtures";
+import { SAMPLE_DOC } from "./plan-doc-fixture";
 
 const a: Assumptions = {
   ...defaultAssumptions(new Date("2026-11-21T12:00:00Z")),
@@ -18,24 +18,6 @@ const a: Assumptions = {
   financing: { equity: 2_000_000, grants: 0, loans: [] },
 };
 
-export const SAMPLE_DOC: PlanDocument = {
-  resume: "Boutique de chaussettes à Akanda.",
-  projet: "Premier paragraphe.\nSecond paragraphe.",
-  marche: { clientele: "Familles du quartier.", concurrence: "Marchés et vendeurs ambulants.", tendances: "Achats repérés sur WhatsApp." },
-  emplacement: { analyse: "Axe passant à vérifier.", criteres: [{ critere: "Passage", note: 4, commentaire: "À compter aux heures de pointe." }] },
-  marketing: {
-    message: "La bonne paire pour chaque jour.",
-    canaux: [
-      { canal: "WhatsApp", action: "Catalogue", part: 60 },
-      { canal: "Facebook", action: "Annonces locales", part: 40 },
-    ],
-    calendrier: [{ periode: "Semaines 1 et 2", actions: ["Aménagement"] }],
-  },
-  risques: [{ risque: "Rupture de stock", parade: "Suivi des ventes." }],
-  demarches: ["Bail commercial", "Immatriculation auprès de l'ANPI-Gabon"],
-  conclusion: "Projet sobre et prudent.",
-  generation: { model: "test", generatedAt: "2026-11-21T16:00:00.000Z" },
-};
 
 describe("export Word du business plan", () => {
   it("produit un fichier Word valide avec les sections et les chiffres du moteur", async () => {

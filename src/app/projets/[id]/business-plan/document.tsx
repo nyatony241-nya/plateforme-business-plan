@@ -1,12 +1,22 @@
 import type { ReactNode } from "react";
-import { buildPlanView, paragraphs, type PlanViewInput } from "@/lib/business-plan-view";
+import { CashChart } from "@/components/cash-chart";
+import { SCENARIO_LABEL } from "@/engine";
+import type { PlanPhoto } from "@/lib/business-plan";
+import { SECTIONS, buildPlanView, paragraphs, stars, type PlanViewInput } from "@/lib/business-plan-view";
+import { SCENARIO_COLOR, SCENARIO_ORDER } from "@/lib/scenario-colors";
 
-function Section({ n, title, children }: { n: number; title: string; children: ReactNode }) {
+function Section({ n, children }: { n: number; children: ReactNode }) {
+  const { emoji, title } = SECTIONS[n - 1];
   return (
-    <section className="mt-10 print:mt-8">
-      <h2 className="break-after-avoid font-display text-2xl font-semibold text-ink">
-        <span className="mr-2 text-gold">{n}.</span>
-        {title}
+    <section className="mt-12 print:mt-8">
+      <h2 className="flex items-center gap-3 break-after-avoid border-b border-line pb-2 font-display text-2xl font-semibold text-ink">
+        <span aria-hidden className="text-2xl">
+          {emoji}
+        </span>
+        <span>
+          <span className="mr-2 text-gold">{n}.</span>
+          {title}
+        </span>
       </h2>
       <div className="mt-4 flex flex-col gap-4 leading-relaxed text-ink">{children}</div>
     </section>
@@ -44,26 +54,67 @@ function Table({ children }: { children: ReactNode }) {
   );
 }
 
+function Photo({ photo, tall = false }: { photo?: PlanPhoto; tall?: boolean }) {
+  if (!photo) return null;
+  return (
+    <figure className="break-inside-avoid">
+      {/* Photo hébergée par Pexels ; chargée tout de suite pour l'impression en PDF. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={photo.src}
+        alt={photo.alt || ""}
+        loading="eager"
+        className={`w-full rounded-xl object-cover ${tall ? "aspect-[16/8] print:aspect-[16/7]" : "aspect-[16/6] print:aspect-[3/1]"}`}
+      />
+      <figcaption className="mt-1.5 text-xs text-muted">
+        📷 Photo :{" "}
+        <a href={photo.photographerUrl} className="underline-offset-2 hover:underline">
+          {photo.photographer}
+        </a>{" "}
+        sur{" "}
+        <a href={photo.pageUrl} className="underline-offset-2 hover:underline">
+          Pexels
+        </a>
+      </figcaption>
+    </figure>
+  );
+}
+
 export function PlanDocumentView(input: PlanViewInput) {
   const { doc } = input;
   const v = buildPlanView(input);
 
   return (
     <article className="rounded-2xl border border-line bg-surface p-6 sm:p-10 print:rounded-none print:border-0 print:p-0">
-      <header className="border-b border-line pb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gold">Business plan</p>
+      <header>
+        <Photo photo={v.photos.couverture} tall />
+        <p className={`text-xs font-semibold uppercase tracking-[0.14em] text-gold ${v.photos.couverture ? "mt-6" : ""}`}>
+          🚀 Business plan
+        </p>
         <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight text-ink sm:text-5xl">{v.title}</h1>
         <p className="mt-3 text-lg text-ink-soft">{v.subtitle}</p>
         <p className="mt-2 text-sm text-muted">{v.dateLine}</p>
+        <div className="mt-8 grid grid-cols-2 gap-3 break-inside-avoid sm:grid-cols-4">
+          {v.kpis.map((k) => (
+            <div key={k.label} className="rounded-xl border border-forest/20 bg-forest-50 p-4 print:p-3">
+              <p className="text-2xl" aria-hidden>
+                {k.emoji}
+              </p>
+              <p className="mt-2 text-xs font-semibold text-ink-soft">{k.label}</p>
+              <p className="mt-1 font-display text-lg font-semibold tabular-nums text-ink print:text-sm">{k.value}</p>
+            </div>
+          ))}
+        </div>
       </header>
 
-      <Section n={1} title="Résumé">
+      <Section n={1}>
         <Paragraphs text={doc.resume} />
       </Section>
 
-      <Section n={2} title="Le projet">
+      <Section n={2}>
         <Paragraphs text={doc.projet} />
-        <Sub title="Ce que nous vendons">
+        <Photo photo={v.photos.projet} />
+        <Sub title="🛍️ Ce que nous vendons">
           <ul className="list-disc pl-5">
             {v.offers.map((o) => (
               <li key={o}>{o}</li>
@@ -72,19 +123,20 @@ export function PlanDocumentView(input: PlanViewInput) {
         </Sub>
       </Section>
 
-      <Section n={3} title="Le marché">
-        <Sub title="Clientèle">
+      <Section n={3}>
+        <Photo photo={v.photos.marche} />
+        <Sub title="🧑‍🤝‍🧑 Clientèle">
           <Paragraphs text={doc.marche.clientele} />
         </Sub>
-        <Sub title="Concurrence">
+        <Sub title="🏪 Concurrence">
           <Paragraphs text={doc.marche.concurrence} />
         </Sub>
-        <Sub title="Habitudes d'achat">
+        <Sub title="🛒 Habitudes d'achat">
           <Paragraphs text={doc.marche.tendances} />
         </Sub>
       </Section>
 
-      <Section n={4} title="L'emplacement">
+      <Section n={4}>
         <Paragraphs text={doc.emplacement.analyse} />
         {doc.emplacement.criteres.length > 0 ? (
           <Table>
@@ -99,18 +151,20 @@ export function PlanDocumentView(input: PlanViewInput) {
               {doc.emplacement.criteres.map((c) => (
                 <tr key={c.critere} className="border-b border-line/70 last:border-0">
                   <td className={`${td} font-semibold`}>{c.critere}</td>
-                  <td className={`${td} whitespace-nowrap tabular-nums`}>{c.note} / 5</td>
+                  <td className={`${td} whitespace-nowrap text-gold`} aria-label={`${c.note} sur 5`}>
+                    {stars(c.note)}
+                  </td>
                   <td className={`${td} text-ink-soft`}>{c.commentaire}</td>
                 </tr>
               ))}
             </tbody>
           </Table>
         ) : null}
-        <p className="text-xs text-muted">Notes indicatives, à confirmer par une visite sur place.</p>
+        <p className="text-xs text-muted">ℹ️ Notes indicatives, à confirmer par une visite sur place.</p>
       </Section>
 
-      <Section n={5} title="Le plan financier">
-        <Sub title="Investissements de départ">
+      <Section n={5}>
+        <Sub title="🧱 Investissements de départ">
           <Table>
             <tbody>
               {v.investments.map((inv) => (
@@ -128,7 +182,7 @@ export function PlanDocumentView(input: PlanViewInput) {
             </tbody>
           </Table>
         </Sub>
-        <Sub title="Financement">
+        <Sub title="🏦 Financement">
           <p>{v.financing}</p>
           {v.shortfall ? <p className="mt-1 font-semibold text-danger">{v.shortfall}</p> : null}
         </Sub>
@@ -158,7 +212,7 @@ export function PlanDocumentView(input: PlanViewInput) {
             </tbody>
           </Table>
         </Sub>
-        <Sub title="Trois scénarios pour la première année">
+        <Sub title="🔀 Trois scénarios pour la première année">
           <Table>
             <thead>
               <tr className="border-b border-line">
@@ -178,13 +232,28 @@ export function PlanDocumentView(input: PlanViewInput) {
             </tbody>
           </Table>
         </Sub>
-        <p>{v.outlook}</p>
+        <Sub title="📊 Argent en caisse, mois par mois">
+          <div className="rounded-xl border border-line p-3">
+            <CashChart
+              title="Argent en caisse, mois par mois, selon les trois scénarios"
+              months={input.results.realiste.months.map((m) => m.month)}
+              series={SCENARIO_ORDER.map((id) => ({
+                id,
+                label: SCENARIO_LABEL[id],
+                color: SCENARIO_COLOR[id],
+                values: input.results[id].months.map((m) => m.cash.end),
+              }))}
+            />
+          </div>
+        </Sub>
+        <p className="rounded-xl bg-gold-50 px-4 py-3">👉 {v.outlook}</p>
       </Section>
 
-      <Section n={6} title="Le marketing">
+      <Section n={6}>
         <p>
-          <strong>Message :</strong> {doc.marketing.message}
+          <strong>🎯 Message :</strong> {doc.marketing.message}
         </p>
+        <Photo photo={v.photos.marketing} />
         <Table>
           <thead>
             <tr className="border-b border-line">
@@ -196,7 +265,9 @@ export function PlanDocumentView(input: PlanViewInput) {
           <tbody>
             {v.marketing.map((c, i) => (
               <tr key={`${c.canal}-${i}`} className="border-b border-line/70 last:border-0">
-                <td className={`${td} font-semibold`}>{c.canal}</td>
+                <td className={`${td} whitespace-nowrap font-semibold`}>
+                  <span aria-hidden>{c.emoji}</span> {c.canal}
+                </td>
                 <td className={`${td} text-ink-soft`}>{c.action}</td>
                 <td className={num}>{c.budget}</td>
               </tr>
@@ -206,11 +277,11 @@ export function PlanDocumentView(input: PlanViewInput) {
         {v.marketingWithoutBudget ? (
           <p className="text-sm text-muted">Aucun budget marketing n&apos;est prévu dans le plan financier.</p>
         ) : null}
-        <Sub title="Les 90 premiers jours">
+        <Sub title="🗓️ Les 90 premiers jours">
           <ol className="flex flex-col gap-3">
             {doc.marketing.calendrier.map((p) => (
               <li key={p.periode} className="break-inside-avoid">
-                <p className="font-semibold text-ink">{p.periode}</p>
+                <p className="font-semibold text-ink">📅 {p.periode}</p>
                 <ul className="list-disc pl-5">
                   {p.actions.map((x) => (
                     <li key={x}>{x}</li>
@@ -222,27 +293,27 @@ export function PlanDocumentView(input: PlanViewInput) {
         </Sub>
       </Section>
 
-      <Section n={7} title="Les risques">
+      <Section n={7}>
         <ul className="flex flex-col gap-3">
           {doc.risques.map((x) => (
             <li key={x.risque} className="break-inside-avoid">
-              <p className="font-semibold">{x.risque}</p>
-              <p className="text-ink-soft">{x.parade}</p>
+              <p className="font-semibold">🔸 {x.risque}</p>
+              <p className="text-ink-soft">✅ {x.parade}</p>
             </li>
           ))}
         </ul>
       </Section>
 
-      <Section n={8} title="Les démarches">
+      <Section n={8}>
         <ol className="list-decimal pl-5">
           {doc.demarches.map((d) => (
             <li key={d}>{d}</li>
           ))}
         </ol>
-        <p className="text-sm text-muted">Frais, délais et pièces à confirmer auprès de l&apos;ANPI-Gabon.</p>
+        <p className="text-sm text-muted">ℹ️ Frais, délais et pièces à confirmer auprès de l&apos;ANPI-Gabon.</p>
       </Section>
 
-      <Section n={9} title="Conclusion">
+      <Section n={9}>
         <Paragraphs text={doc.conclusion} />
       </Section>
 

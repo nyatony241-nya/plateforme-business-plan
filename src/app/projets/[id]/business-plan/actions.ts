@@ -6,6 +6,7 @@ import { generatePlanDocument } from "@/lib/ai/generate-plan-document";
 import { DEFAULT_MODEL } from "@/lib/ai/model";
 import { assumptionsSchema, toPlanInput } from "@/lib/assumptions";
 import { getCountryParams } from "@/lib/data/country-params";
+import { findPlanPhotos } from "@/lib/images/pexels";
 import {
   countMyAiRunsSince,
   getAssumptions,
@@ -56,7 +57,8 @@ export async function writeBusinessPlan(projectId: string): Promise<FormState> {
       parsed.data,
       results.realiste,
     );
-    await upsertPlanDocument(projectId, out.document);
+    const photos = await findPlanPhotos(out.document.photoQueries ?? {});
+    await upsertPlanDocument(projectId, { ...out.document, photos });
     await logAiRun({
       projectId,
       purpose: PURPOSE,

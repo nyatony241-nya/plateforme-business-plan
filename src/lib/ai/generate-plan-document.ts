@@ -48,6 +48,16 @@ const aiSchema = z.object({
     .array(z.string())
     .describe("Étapes pour créer l'entreprise et ouvrir, dans l'ordre, sans frais ni délais ni téléphone"),
   conclusion: z.string().describe("Conclusion en 3 ou 4 phrases."),
+  photos: z
+    .object({
+      couverture: z.string(),
+      projet: z.string(),
+      marche: z.string(),
+      marketing: z.string(),
+    })
+    .describe(
+      "Recherches de photos libres de droit, EN ANGLAIS, 2 à 5 mots, une scène concrète et visible (ex. « african woman shopping market », « socks display shop »). Couverture : le produit ou le lieu ; projet : le produit ou le service ; marché : des clients africains ; marketing : un smartphone ou des réseaux sociaux. Aucune marque.",
+    ),
 });
 
 export function buildDocumentInstructions() {
@@ -144,6 +154,12 @@ export async function generatePlanDocument(
     risques: out.risques.slice(0, 6).map((r) => ({ risque: clean(r.risque, 200), parade: clean(r.parade, 400) })),
     demarches: out.demarches.slice(0, 8).map((d) => clean(d, 300)).filter(Boolean),
     conclusion: prose(out.conclusion, 1200),
+    photoQueries: {
+      couverture: clean(out.photos.couverture, 80),
+      projet: clean(out.photos.projet, 80),
+      marche: clean(out.photos.marche, 80),
+      marketing: clean(out.photos.marketing, 80),
+    },
     generation: { model, generatedAt: new Date().toISOString() },
   });
   return {

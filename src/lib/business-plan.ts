@@ -6,6 +6,21 @@ const text = (max: number) => z.string().trim().min(1).max(max);
 
 export const CHANNELS = ["Facebook", "TikTok", "WhatsApp", "Instagram", "Bouche-à-oreille", "Affichage", "Autre"] as const;
 
+/** Photo libre de droit (Pexels), avec ce qu'il faut pour créditer son auteur. */
+export const planPhotoSchema = z.object({
+  id: z.number().int(),
+  alt: z.string().max(300),
+  photographer: z.string().max(120),
+  photographerUrl: z.string().url().max(300),
+  pageUrl: z.string().url().max(300),
+  src: z.string().url().max(400),
+});
+
+export type PlanPhoto = z.infer<typeof planPhotoSchema>;
+
+export const PHOTO_SLOTS = ["couverture", "projet", "marche", "marketing"] as const;
+export type PhotoSlot = (typeof PHOTO_SLOTS)[number];
+
 /** Business plan rédigé. Il ne contient aucun montant : les chiffres viennent du moteur au moment de l'affichage. */
 export const planDocumentSchema = z.object({
   resume: text(1500),
@@ -26,6 +41,9 @@ export const planDocumentSchema = z.object({
   risques: z.array(z.object({ risque: text(200), parade: text(400) })).min(1).max(6),
   demarches: z.array(text(300)).min(1).max(8),
   conclusion: text(1200),
+  /** Recherches de photos proposées par l'IA (en anglais), une par emplacement. */
+  photoQueries: z.partialRecord(z.enum(PHOTO_SLOTS), z.string().max(80)).optional(),
+  photos: z.partialRecord(z.enum(PHOTO_SLOTS), planPhotoSchema).optional(),
   generation: z.object({ model: z.string().max(100), generatedAt: z.string().max(40) }),
 });
 

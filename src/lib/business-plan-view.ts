@@ -1,9 +1,38 @@
 import { SCENARIO_LABEL, type PlanResult, type ScenarioId } from "@/engine";
 import { INVESTMENT_KINDS, type Assumptions } from "@/lib/assumptions";
-import { monthlyMarketingBudget, splitBudget, type PlanDocument } from "@/lib/business-plan";
+import { monthlyMarketingBudget, splitBudget, type PlanDocument, type PlanPhoto } from "@/lib/business-plan";
 import { formatDateFr } from "@/lib/data-status";
 import { formatMonth, formatXaf } from "@/lib/format";
 import { ownerIncome } from "@/lib/owner-income";
+
+/** Titres des parties, avec leur émoticône (même ordre que le document). */
+export const SECTIONS = [
+  { emoji: "📌", title: "Résumé" },
+  { emoji: "💡", title: "Le projet" },
+  { emoji: "👥", title: "Le marché" },
+  { emoji: "📍", title: "L'emplacement" },
+  { emoji: "💰", title: "Le plan financier" },
+  { emoji: "📣", title: "Le marketing" },
+  { emoji: "⚠️", title: "Les risques" },
+  { emoji: "🧾", title: "Les démarches" },
+  { emoji: "✅", title: "Conclusion" },
+] as const;
+
+const CHANNEL_EMOJI: Record<string, string> = {
+  Facebook: "📘",
+  TikTok: "🎵",
+  WhatsApp: "💬",
+  Instagram: "📸",
+  "Bouche-à-oreille": "🗣️",
+  Affichage: "🪧",
+  Autre: "✨",
+};
+
+/** Note sur 5 en étoiles : ★★★★☆ */
+export const stars = (note: number) => "★".repeat(note) + "☆".repeat(Math.max(0, 5 - note));
+
+/** Légende de crédit d'une photo Pexels. */
+export const photoCredit = (photo: PlanPhoto) => `Photo : ${photo.photographer} sur Pexels`;
 
 export type PlanViewInput = {
   doc: PlanDocument;
@@ -48,8 +77,17 @@ export function buildPlanView({ doc, a, results, project, minimumWage }: PlanVie
     .filter(Boolean)
     .join(" ");
 
+  const kpis = [
+    { emoji: "💵", label: "Ventes la 1re année", value: formatXaf(r.years[0].revenue) },
+    { emoji: "📈", label: "Bénéfice la 1re année", value: formatXaf(r.years[0].netResult) },
+    { emoji: "🏦", label: "Argent nécessaire au départ", value: formatXaf(r.financing.totalNeed) },
+    { emoji: "🎯", label: "Rentable dès", value: be ? formatMonth(r.months[be - 1].month) : "Après 3 ans" },
+  ];
+
   return {
     title: project.name,
+    kpis,
+    photos: doc.photos ?? {},
     subtitle: [project.sector, [project.district, project.city, project.country].filter(Boolean).join(", ")]
       .filter(Boolean)
       .join(" · "),
@@ -79,11 +117,13 @@ export function buildPlanView({ doc, a, results, project, minimumWage }: PlanVie
     outlook,
     marketing: doc.marketing.canaux.map((c, i) => ({
       canal: c.canal,
+      emoji: CHANNEL_EMOJI[c.canal] ?? "✨",
       action: c.action,
       budget: budget > 0 ? formatXaf(amounts[i]) : "—",
     })),
     marketingWithoutBudget: budget === 0,
     footer:
+      (doc.photos && Object.keys(doc.photos).length > 0 ? "Photos fournies par Pexels. " : "") +
       "Les chiffres de ce document sont des hypothèses proposées automatiquement puis calculées par un moteur financier ; ils ne proviennent pas d'une étude de terrain et doivent être vérifiés. Montants en francs CFA, hors taxes.",
   };
 }

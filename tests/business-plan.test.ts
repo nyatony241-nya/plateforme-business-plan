@@ -70,3 +70,11 @@ describe("mise en paragraphes", () => {
     expect(prose("une S.A.R.L. Elle vend", 100)).toBe("une S.A.R.L. Elle vend");
   });
 });
+
+describe("affichage des montants", () => {
+  it("n'affiche jamais « -0 »", async () => {
+    const { formatXaf } = await import("@/lib/format");
+    expect(formatXaf(-0)).toBe(formatXaf(0));
+    expect(formatXaf(-0.4)).toBe(formatXaf(0));
+  });
+});

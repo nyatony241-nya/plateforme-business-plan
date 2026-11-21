@@ -2,12 +2,13 @@
 
 const integer = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 });
 
+// Arrondi puis « + 0 » : jamais de « -0 FCFA » à l'écran.
 export function formatNumber(value: number) {
-  return integer.format(value);
+  return integer.format(Math.round(value) + 0);
 }
 
 export function formatXaf(value: number) {
-  return `${integer.format(value)} FCFA`;
+  return `${integer.format(Math.round(value) + 0)} FCFA`;
 }
 
 /** Montant court pour un axe : 1,2 M · 850 k · 3,4 Md. */

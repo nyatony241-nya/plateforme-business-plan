@@ -14,15 +14,9 @@ import {
   formatXaf,
 } from "@/lib/format";
 import { ownerIncome } from "@/lib/owner-income";
+import { SCENARIO_COLOR, SCENARIO_ORDER } from "@/lib/scenario-colors";
 
-/** Couleurs validées (séparation daltonisme et vision normale) ; étiquetées en bout de courbe. */
-export const SCENARIO_COLOR: Record<ScenarioId, string> = {
-  realiste: "#2a78d6",
-  prudent: "#eb6834",
-  optimiste: "#1baf7a",
-};
-
-const ORDER: ScenarioId[] = ["prudent", "realiste", "optimiste"];
+const ORDER = SCENARIO_ORDER;
 
 function Kpi({
   label,

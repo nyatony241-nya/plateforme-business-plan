@@ -4,7 +4,9 @@ import {
   BorderStyle,
   Document,
   Footer,
+  ExternalHyperlink,
   HeadingLevel,
+  ImageRun,
   LevelFormat,
   Packer,
   PageNumber,
@@ -16,7 +18,8 @@ import {
   TextRun,
   WidthType,
 } from "docx";
-import { buildPlanView, paragraphs, type PlanViewInput } from "@/lib/business-plan-view";
+import type { PhotoSlot, PlanPhoto } from "@/lib/business-plan";
+import { SECTIONS, buildPlanView, paragraphs, stars, type PlanViewInput } from "@/lib/business-plan-view";
 
 const FOREST = "0F4D3A";
 const GOLD = "A8771F";
@@ -36,16 +39,74 @@ const p = (text: string, opts: { bold?: boolean; color?: string; size?: number; 
 
 const prose = (text: string) => paragraphs(text).map((t) => p(t));
 
-const h2 = (n: number, title: string) =>
-  new Paragraph({
+const h2 = (n: number) => {
+  const { emoji, title } = SECTIONS[n - 1];
+  return new Paragraph({
     heading: HeadingLevel.HEADING_2,
     keepNext: true,
-    spacing: { before: 360, after: 160 },
+    spacing: { before: 400, after: 160 },
+    border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: LINE, space: 4 } },
     children: [
+      new TextRun({ text: `${emoji}  `, size: 30 }),
       new TextRun({ text: `${n}. `, color: GOLD, bold: true, size: 30 }),
       new TextRun({ text: title, color: FOREST, bold: true, size: 30 }),
     ],
   });
+};
+
+// Photos : 16:7 environ, sur toute la largeur du texte (en pixels à 96 ppp).
+const IMAGE_WIDTH = 640;
+
+/** Télécharge les photos Pexels pour les intégrer au fichier ; une photo indisponible est omise. */
+async function loadPhotos(photos: Partial<Record<PhotoSlot, PlanPhoto>>) {
+  const loaded: Partial<Record<PhotoSlot, { photo: PlanPhoto; data: Uint8Array }>> = {};
+  await Promise.all(
+    Object.entries(photos).map(async ([slot, photo]) => {
+      if (!photo || !photo.src.startsWith("https://images.pexels.com/")) return;
+      try {
+        const res = await fetch(photo.src, { signal: AbortSignal.timeout(8000) });
+        if (!res.ok) return;
+        loaded[slot as PhotoSlot] = { photo, data: new Uint8Array(await res.arrayBuffer()) };
+      } catch {
+        // Photo omise.
+      }
+    }),
+  );
+  return loaded;
+}
+
+function photoBlock(item?: { photo: PlanPhoto; data: Uint8Array }, ratio = 627 / 1200) {
+  if (!item) return [];
+  return [
+    new Paragraph({
+      keepNext: true,
+      spacing: { before: 120, after: 40 },
+      children: [
+        new ImageRun({
+          type: "jpg",
+          data: item.data,
+          transformation: { width: IMAGE_WIDTH, height: Math.round(IMAGE_WIDTH * ratio) },
+          altText: { name: "Photo", description: item.photo.alt || "Photo", title: "Photo" },
+        }),
+      ],
+    }),
+    new Paragraph({
+      spacing: { after: 160 },
+      children: [
+        new TextRun({ text: "📷 Photo : ", size: 16, color: MUTED }),
+        new ExternalHyperlink({
+          link: item.photo.photographerUrl,
+          children: [new TextRun({ text: item.photo.photographer, size: 16, color: MUTED, underline: {} })],
+        }),
+        new TextRun({ text: " sur ", size: 16, color: MUTED }),
+        new ExternalHyperlink({
+          link: item.photo.pageUrl,
+          children: [new TextRun({ text: "Pexels", size: 16, color: MUTED, underline: {} })],
+        }),
+      ],
+    }),
+  ];
+}
 
 const h3 = (title: string) =>
   new Paragraph({
@@ -101,13 +162,44 @@ function table(rows: string[][], widths: number[], opts: { header?: boolean; num
 
 const spacer = () => new Paragraph({ spacing: { after: 120 }, children: [] });
 
+/** Encadrés des chiffres clés : une ligne de 4 cases sur fond vert pâle. */
+function kpiTable(kpis: { emoji: string; label: string; value: string }[]) {
+  const col = Math.round(CONTENT / kpis.length);
+  const white = { style: BorderStyle.SINGLE, size: 12, color: "FFFFFF" };
+  return new Table({
+    width: { size: CONTENT, type: WidthType.DXA },
+    columnWidths: kpis.map(() => col),
+    rows: [
+      new TableRow({
+        cantSplit: true,
+        children: kpis.map(
+          (k) =>
+            new TableCell({
+              width: { size: col, type: WidthType.DXA },
+              borders: { top: white, bottom: white, left: white, right: white },
+              shading: { type: ShadingType.CLEAR, color: "auto", fill: "E7F0EC" },
+              margins: { top: 120, bottom: 120, left: 140, right: 140 },
+              children: [
+                new Paragraph({ children: [new TextRun({ text: k.emoji, size: 28 })] }),
+                new Paragraph({ spacing: { before: 60 }, children: [new TextRun({ text: k.label, size: 16, color: "3F4A45", bold: true })] }),
+                new Paragraph({ spacing: { before: 40 }, children: [new TextRun({ text: k.value, size: 22, bold: true })] }),
+              ],
+            }),
+        ),
+      }),
+    ],
+  });
+}
+
 /** Fichier Word du business plan, identique au contenu de la page et du PDF. */
 export async function businessPlanDocx(input: PlanViewInput): Promise<Buffer> {
   const { doc } = input;
   const v = buildPlanView(input);
+  const photos = await loadPhotos(v.photos);
 
   const children = [
-    p("BUSINESS PLAN", { bold: true, color: GOLD, size: 18, after: 120 }),
+    ...photoBlock(photos.couverture),
+    p("🚀 BUSINESS PLAN", { bold: true, color: GOLD, size: 18, after: 120 }),
     new Paragraph({
       heading: HeadingLevel.TITLE,
       spacing: { after: 160 },
@@ -115,44 +207,47 @@ export async function businessPlanDocx(input: PlanViewInput): Promise<Buffer> {
     }),
     p(v.subtitle, { size: 24, color: "3F4A45", after: 80 }),
     p(v.dateLine, { size: 18, color: MUTED, after: 240 }),
+    kpiTable(v.kpis),
 
-    h2(1, "Résumé"),
+    h2(1),
     ...prose(doc.resume),
 
-    h2(2, "Le projet"),
+    h2(2),
     ...prose(doc.projet),
-    h3("Ce que nous vendons"),
+    ...photoBlock(photos.projet),
+    h3("🛍️ Ce que nous vendons"),
     ...v.offers.map(bullet),
 
-    h2(3, "Le marché"),
-    h3("Clientèle"),
+    h2(3),
+    ...photoBlock(photos.marche),
+    h3("🧑‍🤝‍🧑 Clientèle"),
     ...prose(doc.marche.clientele),
-    h3("Concurrence"),
+    h3("🏪 Concurrence"),
     ...prose(doc.marche.concurrence),
-    h3("Habitudes d'achat"),
+    h3("🛒 Habitudes d'achat"),
     ...prose(doc.marche.tendances),
 
-    h2(4, "L'emplacement"),
+    h2(4),
     ...prose(doc.emplacement.analyse),
     ...(doc.emplacement.criteres.length > 0
       ? [
           table(
-            [["Critère", "Note", "Commentaire"], ...doc.emplacement.criteres.map((c) => [c.critere, `${c.note} / 5`, c.commentaire])],
-            [3, 1.2, 6],
+            [["Critère", "Note", "Commentaire"], ...doc.emplacement.criteres.map((c) => [c.critere, stars(c.note), c.commentaire])],
+            [3, 1.7, 5.5],
             { header: true },
           ),
         ]
       : []),
-    p("Notes indicatives, à confirmer par une visite sur place.", { size: 17, color: MUTED }),
+    p("ℹ️ Notes indicatives, à confirmer par une visite sur place.", { size: 17, color: MUTED }),
 
-    h2(5, "Le plan financier"),
-    h3("Investissements de départ"),
+    h2(5),
+    h3("🧱 Investissements de départ"),
     table(
       [...v.investments.map((inv) => [`${inv.label} (${inv.kind})`, inv.amount]), ["Total", v.investmentsTotal]],
       [7, 3],
       { numeric: [1], boldLast: true },
     ),
-    h3("Financement"),
+    h3("🏦 Financement"),
     p(v.financing),
     ...(v.shortfall ? [p(v.shortfall, { bold: true, color: "B42318" })] : []),
     h3(v.forecastTitle),
@@ -161,43 +256,44 @@ export async function businessPlanDocx(input: PlanViewInput): Promise<Buffer> {
       [4, ...v.forecastYears.map(() => 2)],
       { header: true, numeric: v.forecastYears.map((_, i) => i + 1) },
     ),
-    h3("Trois scénarios pour la première année"),
+    h3("🔀 Trois scénarios pour la première année"),
     table(
       [["Scénario", "Ventes", "Bénéfice"], ...v.scenarios.map((s) => [s.label, s.revenue, s.net])],
       [4, 3, 3],
       { header: true, numeric: [1, 2] },
     ),
     spacer(),
-    p(v.outlook),
+    p(`👉 ${v.outlook}`),
 
-    h2(6, "Le marketing"),
+    h2(6),
     new Paragraph({
       spacing: { after: 160 },
-      children: [new TextRun({ text: "Message : ", bold: true }), new TextRun(doc.marketing.message)],
+      children: [new TextRun({ text: "🎯 Message : ", bold: true }), new TextRun(doc.marketing.message)],
     }),
+    ...photoBlock(photos.marketing),
     table(
-      [["Canal", "Action", "Budget par mois"], ...v.marketing.map((c) => [c.canal, c.action, c.budget])],
+      [["Canal", "Action", "Budget par mois"], ...v.marketing.map((c) => [`${c.emoji} ${c.canal}`, c.action, c.budget])],
       [2.2, 6, 2.4],
       { header: true, numeric: [2] },
     ),
     ...(v.marketingWithoutBudget ? [p("Aucun budget marketing n'est prévu dans le plan financier.", { size: 18, color: MUTED })] : []),
-    h3("Les 90 premiers jours"),
+    h3("🗓️ Les 90 premiers jours"),
     ...doc.marketing.calendrier.flatMap((period) => [
-      p(period.periode, { bold: true, after: 60 }),
+      p(`📅 ${period.periode}`, { bold: true, after: 60 }),
       ...period.actions.map(bullet),
     ]),
 
-    h2(7, "Les risques"),
-    ...doc.risques.flatMap((x) => [p(x.risque, { bold: true, after: 40 }), p(x.parade, { color: "3F4A45" })]),
+    h2(7),
+    ...doc.risques.flatMap((x) => [p(`🔸 ${x.risque}`, { bold: true, after: 40 }), p(`✅ ${x.parade}`, { color: "3F4A45" })]),
 
-    h2(8, "Les démarches"),
+    h2(8),
     ...doc.demarches.map(
       (d) =>
         new Paragraph({ numbering: { reference: "etapes", level: 0 }, spacing: { after: 60 }, children: [new TextRun(d)] }),
     ),
-    p("Frais, délais et pièces à confirmer auprès de l'ANPI-Gabon.", { size: 18, color: MUTED }),
+    p("ℹ️ Frais, délais et pièces à confirmer auprès de l'ANPI-Gabon.", { size: 18, color: MUTED }),
 
-    h2(9, "Conclusion"),
+    h2(9),
     ...prose(doc.conclusion),
 
     new Paragraph({
