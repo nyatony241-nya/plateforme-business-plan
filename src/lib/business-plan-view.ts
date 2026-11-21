@@ -130,7 +130,7 @@ export function buildPlanView({ doc, a, results, project, minimumWage, creation 
       ? [
           `Forme juridique conseillée : ${creation.form}.`,
           creation.fee !== null
-            ? `Frais de création à l'ANPI : environ ${formatXaf(creation.fee)} (charte officielle, à confirmer au paiement).`
+            ? `Frais de création à l'ANPI : environ ${formatXaf(creation.fee)} (tarif officiel de l'ANPI).`
             : null,
           creation.delay ? `Délai indicatif : ${creation.delay}.` : null,
           creation.website
