@@ -12,8 +12,7 @@ import { getCountryParams } from "@/lib/data/country-params";
 import { getCreationSummary } from "@/lib/data/creation";
 import { getCreditBalance, getCreditPacks, isPlanUnlocked } from "@/lib/data/credits";
 import { formatXaf } from "@/lib/format";
-import { PREVIEW_SECTIONS, previewDocument } from "@/lib/plan-preview";
-import { SECTIONS } from "@/lib/business-plan-view";
+import { previewDocument } from "@/lib/plan-preview";
 import {
   getAssumptions,
   getMyProject,
@@ -241,9 +240,7 @@ function UnlockPanel({
 }) {
   return (
     <section className="mt-4 rounded-2xl border border-brand/30 bg-brand-50 p-5 print:hidden">
-      <p className="font-semibold text-ink">
-        🔒 Aperçu gratuit : {PREVIEW_SECTIONS} parties sur {SECTIONS.length}
-      </p>
+      <p className="font-display text-lg font-semibold text-ink">🔒 Aperçu gratuit : les 3 premières pages</p>
       <p className="mt-1 text-sm text-ink-soft">
         Débloquez le business plan complet : marché, emplacement, plan financier détaillé, marketing sur 90 jours,
         risques et démarches. Sans filigrane, à télécharger en PDF et en Word.
@@ -256,12 +253,14 @@ function UnlockPanel({
             </button>
           </form>
         ) : (
-          <ButtonLink href={`/credits?projet=${projectId}`}>🔓 Débloquer le business plan</ButtonLink>
+          <ButtonLink href={`/credits?projet=${projectId}`}>
+            🔓 Débloquer le plan complet{fromPrice ? ` · ${formatXaf(fromPrice)}` : ""}
+          </ButtonLink>
         )}
         <p className="text-sm text-muted">
           {balance > 0
             ? `Il vous reste ${balance} crédit${balance > 1 ? "s" : ""}.`
-            : `1 crédit = 1 business plan complet${fromPrice ? `, à partir de ${formatXaf(fromPrice)}` : ""}.`}
+            : "Paiement unique, sans abonnement. Le plan reste à vous pour toujours."}
         </p>
       </div>
     </section>

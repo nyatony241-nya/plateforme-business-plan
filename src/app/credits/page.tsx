@@ -58,8 +58,8 @@ export default async function CreditsPage({ searchParams }: PageProps<"/credits"
             {balance} crédit{balance > 1 ? "s" : ""}
           </h1>
           <p className="mt-2 text-ink-soft">
-            1 crédit débloque un business plan complet, pour toujours : toutes les parties, sans filigrane, en PDF et
-            en Word.
+            Un paiement débloque un business plan complet, pour toujours : toutes les parties, sans filigrane, en PDF
+            et en Word.
           </p>
         </div>
 
@@ -73,7 +73,7 @@ export default async function CreditsPage({ searchParams }: PageProps<"/credits"
                 </Link>
               </>
             ) : (
-              <>Choisissez une formule : « {project.name} » sera débloqué juste après le paiement.</>
+              <>« {project.name} » sera débloqué juste après le paiement.</>
             )}
           </div>
         ) : null}

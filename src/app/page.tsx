@@ -20,18 +20,10 @@ import { formatXaf } from "@/lib/format";
 import { PLAN_DESIGNS } from "@/lib/plan-designs";
 import { getCurrentUser } from "@/lib/supabase/server";
 
-/** Grille affichée si la base est injoignable (mêmes valeurs que la base au 22/11/2026). */
+/** Offre affichée si la base est injoignable (même valeur que la base au 22/11/2026). */
 const FALLBACK_PACKS: CreditPack[] = [
-  { code: "starter", name: "Essentiel", credits: 1, price_xaf: 10000, chariow_product_id: null },
-  { code: "pro", name: "Pro", credits: 3, price_xaf: 20000, chariow_product_id: null },
-  { code: "business", name: "Business", credits: 10, price_xaf: 50000, chariow_product_id: null },
+  { code: "starter", name: "Business plan complet", credits: 1, price_xaf: 4900, chariow_product_id: null },
 ];
-
-const PACK_AUDIENCE: Record<string, string> = {
-  starter: "Pour votre projet",
-  pro: "Pour comparer plusieurs idées",
-  business: "Incubateurs, consultants, associations",
-};
 
 const NAV = [
   { id: "probleme", label: "Le problème" },
@@ -142,8 +134,7 @@ async function loadPacks(): Promise<CreditPack[]> {
 
 export default async function HomePage() {
   const [packs, user] = await Promise.all([loadPacks(), isSupabaseConfigured ? getCurrentUser() : null]);
-  const single = packs.find((p) => p.credits === 1) ?? packs[0];
-  const unit = single ? single.price_xaf : 0;
+  const plan = packs.find((p) => p.credits === 1) ?? FALLBACK_PACKS[0];
   const start = user ? { href: "/tableau-de-bord", label: "Mon tableau de bord" } : { href: "/inscription", label: "Commencer" };
 
   return (
@@ -416,42 +407,48 @@ export default async function HomePage() {
         <section id="tarifs" className="scroll-mt-20">
           <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 lg:py-24">
             <div className="max-w-2xl">
-              <Eyebrow>Paiement par plan, sans abonnement</Eyebrow>
-              <Title before="Nos" highlight="tarifs" />
+              <Eyebrow>Un seul prix, sans abonnement</Eyebrow>
+              <Title before="Un prix" highlight="unique" />
               <p className="mt-4 leading-relaxed text-ink-soft">
-                L&apos;aperçu est gratuit. Un crédit débloque un business plan complet, à vous pour toujours.
+                L&apos;aperçu est gratuit. Vous ne payez que si le plan vous convient : le document complet est à vous pour toujours.
               </p>
             </div>
-            <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-10 grid gap-5 md:grid-cols-[1fr_1.3fr]">
               <PriceCard
                 name="Aperçu"
-                audience="Pour découvrir"
+                audience="Pour découvrir votre plan"
                 price="Gratuit"
-                rows={["Résumé et présentation du projet", "Chiffres clés", "Avec filigrane, sans téléchargement"]}
-                cta={{ href: start.href, label: "Essayer" }}
+                rows={["Les 3 premières pages", "Résumé, projet et chiffres clés", "Avec filigrane AfriBiz"]}
+                cta={{ href: start.href, label: "Essayer gratuitement" }}
               />
-              {packs.map((p) => {
-                const saving = unit * p.credits - p.price_xaf;
-                return (
-                  <PriceCard
-                    key={p.code}
-                    name={p.name}
-                    audience={PACK_AUDIENCE[p.code] ?? ""}
-                    price={formatXaf(p.price_xaf)}
-                    highlight={p.code === "pro"}
-                    badge={saving > 0 ? `Économie ${formatXaf(saving)}` : undefined}
-                    rows={[
-                      `${p.credits} business plan${p.credits > 1 ? "s" : ""} complet${p.credits > 1 ? "s" : ""}`,
-                      p.credits > 1 ? `Soit ${formatXaf(p.price_xaf / p.credits)} le plan` : "9 parties et plan financier",
-                      "PDF et Word, sans filigrane",
-                      `${PLAN_DESIGNS.length} designs au choix`,
-                    ]}
-                    cta={{ href: user ? "/credits" : "/inscription", label: "Choisir" }}
-                  />
-                );
-              })}
+              <PriceCard
+                name={plan.name}
+                audience="Un projet, un paiement, sans abonnement"
+                price={formatXaf(plan.price_xaf)}
+                highlight
+                rows={[
+                  "Les 9 parties rédigées et illustrées",
+                  "Plan financier sur 3 ans, 3 scénarios",
+                  "PDF et Word, sans filigrane",
+                  `${PLAN_DESIGNS.length} designs au choix`,
+                  "Démarches de création de votre pays",
+                ]}
+                cta={{ href: user ? "/tableau-de-bord" : "/inscription", label: "Créer mon plan" }}
+              />
             </div>
-            <p className="mt-6 text-sm text-muted">Prix en FCFA, toutes taxes comprises. Les crédits n&apos;expirent pas.</p>
+            <dl className="mt-8 grid gap-3 rounded-2xl border border-line bg-surface p-5 text-sm sm:grid-cols-3">
+              {[
+                ["Consultant", "souvent plusieurs centaines de milliers de FCFA, et des semaines d'attente"],
+                ["Rédacteur indépendant", "en général 10 000 à 60 000 FCFA, sans chiffres locaux"],
+                ["AfriBiz", `${formatXaf(plan.price_xaf)}, prêt en quelques minutes`],
+              ].map(([k, v], i) => (
+                <div key={k} className={i === 2 ? "rounded-xl bg-brand-50 p-3" : "p-3"}>
+                  <dt className={`font-display font-semibold ${i === 2 ? "text-brand" : "text-ink"}`}>{k}</dt>
+                  <dd className="mt-1 text-ink-soft">{v}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="mt-6 text-sm text-muted">Prix toutes taxes comprises, payable par Mobile Money.</p>
           </div>
         </section>
 

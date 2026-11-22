@@ -5,6 +5,7 @@ import type { PlanPhoto } from "@/lib/business-plan";
 import { SECTIONS, buildPlanView, paragraphs, photoSourceName, photoSourceUrl, stars, type PlanViewInput } from "@/lib/business-plan-view";
 import { FONT_STACK, getPlanDesign, patternCss, type PlanDesign, type PlanHeading } from "@/lib/plan-designs";
 import { LOCKED_CONTENTS, PREVIEW_SECTIONS } from "@/lib/plan-preview";
+import { watermarkCss } from "@/lib/watermark";
 import { SCENARIO_COLOR, SCENARIO_ORDER } from "@/lib/scenario-colors";
 
 /** Titre de partie, selon le style du design : numéro, pastille ou bande. */
@@ -131,45 +132,60 @@ function Photo({ photo, tall = false }: { photo?: PlanPhoto; tall?: boolean }) {
   );
 }
 
-/** Filigrane de l'aperçu, à l'écran comme à l'impression : la copie n'est pas utilisable. */
-const WATERMARK = `url("data:image/svg+xml,${encodeURIComponent(
-  '<svg xmlns="http://www.w3.org/2000/svg" width="420" height="260"><text x="210" y="140" text-anchor="middle" transform="rotate(-28 210 130)" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="rgba(90,90,100,0.22)">APERÇU · NON VALABLE</text></svg>',
-)}")`;
-
+/** Filigrane de l'aperçu, à l'écran comme à l'impression : « AfriBiz » répété, la copie n'est pas utilisable. */
 function Watermark() {
   return (
     <div
       aria-hidden
+      data-filigrane="afribiz"
       className="pointer-events-none absolute inset-0 z-10 select-none [print-color-adjust:exact] [-webkit-print-color-adjust:exact]"
-      style={{ backgroundImage: WATERMARK, backgroundRepeat: "repeat" }}
+      style={{ backgroundImage: watermarkCss(), backgroundRepeat: "repeat" }}
     />
   );
 }
 
-/** Partie verrouillée : son titre et ce qu'elle contient, sans son texte. */
+function Padlock() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-6" aria-hidden>
+      <rect x="5" y="10.5" width="14" height="10" rx="2.5" fill="currentColor" />
+      <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+      <circle cx="12" cy="15.3" r="1.6" fill="#cc330a" />
+    </svg>
+  );
+}
+
+/** Partie verrouillée : son titre et ce qu'elle contient, sous un cadenas ; le texte n'existe pas encore. */
 function LockedSection({ n, pending = false }: { n: number; pending?: boolean }) {
   const { emoji, title } = SECTIONS[n - 1];
   return (
-    <section className="mt-8 break-inside-avoid rounded-xl border border-dashed border-line-strong bg-paper px-5 py-4">
-      <h2 className="flex items-center gap-3 font-(family-name:--plan-display) text-xl font-semibold text-ink">
-        <span aria-hidden>{emoji}</span>
-        <span>
-          <span className="mr-2 text-(--plan-accent)">{n}.</span>
-          {title}
+    <section className="relative mt-6 overflow-hidden rounded-2xl border border-line bg-surface break-inside-avoid">
+      <div aria-hidden className="flex select-none flex-col gap-2.5 px-6 py-7 blur-[5px]">
+        <div className="h-5 w-2/5 rounded bg-(--plan-primary)/35" />
+        <div className="h-2.5 w-full rounded bg-line-strong" />
+        <div className="h-2.5 w-11/12 rounded bg-line-strong" />
+        <div className="h-2.5 w-4/5 rounded bg-line-strong" />
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          <div className="h-10 rounded bg-(--plan-soft)" />
+          <div className="h-10 rounded bg-(--plan-soft)" />
+          <div className="h-10 rounded bg-(--plan-soft)" />
+        </div>
+      </div>
+      <div className="absolute inset-0 flex items-center gap-4 bg-white/60 px-6">
+        <span className="grid size-12 shrink-0 place-items-center rounded-full bg-linear-to-br from-[#ff8a24] to-[#cc330a] text-white shadow-[0_10px_22px_-10px_rgba(204,51,10,0.8)] [print-color-adjust:exact]">
+          {pending ? <span aria-hidden>⏳</span> : <Padlock />}
         </span>
-        <span aria-hidden className="ml-auto text-base">
-          {pending ? "⏳" : "🔒"}
-        </span>
-      </h2>
-      <ul className="mt-2 flex flex-col gap-1 text-sm text-muted">
-        {(LOCKED_CONTENTS[n] ?? []).map((item) => (
-          <li key={item}>• {item}</li>
-        ))}
-      </ul>
-      <div aria-hidden className="mt-3 flex flex-col gap-2 blur-[3px]">
-        <div className="h-2.5 w-full rounded bg-line" />
-        <div className="h-2.5 w-11/12 rounded bg-line" />
-        <div className="h-2.5 w-4/5 rounded bg-line" />
+        <div className="min-w-0">
+          <h2 className="font-(family-name:--plan-display) text-lg font-semibold text-(--plan-ink)">
+            <span aria-hidden className="mr-1.5">
+              {emoji}
+            </span>
+            <span className="mr-1.5 text-(--plan-accent)">{n}.</span>
+            {title}
+          </h2>
+          <p className="mt-0.5 text-sm text-ink-soft">
+            {pending ? "Rédaction en cours…" : (LOCKED_CONTENTS[n] ?? []).join(" · ")}
+          </p>
+        </div>
       </div>
     </section>
   );
@@ -210,7 +226,7 @@ export function PlanDocumentView(input: PlanViewInput & { preview?: boolean; pen
     >
       {preview && !pending ? <Watermark /> : null}
       {cover === "classique" ? (
-        <header>
+        <header className="print:break-after-page">
           <PatternBand design={d} className="mb-6" />
           <Photo photo={v.photos.couverture} tall />
           <p className={`text-xs font-semibold uppercase tracking-[0.14em] text-(--plan-accent) ${v.photos.couverture ? "mt-6" : ""}`}>
@@ -222,7 +238,7 @@ export function PlanDocumentView(input: PlanViewInput & { preview?: boolean; pen
           {kpis}
         </header>
       ) : cover === "bandeau" ? (
-        <header>
+        <header className="print:break-after-page">
           <div className="overflow-hidden rounded-2xl bg-(--plan-primary) text-white break-inside-avoid">
             <PatternBand design={d} className="rounded-none" />
             <div className="px-6 py-8 sm:px-8 sm:py-10">
@@ -240,7 +256,7 @@ export function PlanDocumentView(input: PlanViewInput & { preview?: boolean; pen
           {kpis}
         </header>
       ) : (
-        <header>
+        <header className="print:break-after-page">
           <PatternBand design={d} className="mb-4" />
           {v.photos.couverture ? (
             <figure className="relative overflow-hidden rounded-2xl break-inside-avoid">
@@ -284,11 +300,11 @@ export function PlanDocumentView(input: PlanViewInput & { preview?: boolean; pen
       </Section>
 
       {preview ? (
-        <>
+        <div className="print:break-before-page">
           {SECTIONS.slice(PREVIEW_SECTIONS).map((_, i) => (
             <LockedSection key={i} n={PREVIEW_SECTIONS + i + 1} pending={pending} />
           ))}
-        </>
+        </div>
       ) : (
         <>
       <Section n={3} heading={d.heading}>

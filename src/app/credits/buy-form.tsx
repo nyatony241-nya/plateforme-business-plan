@@ -51,7 +51,7 @@ export function BuyForm({
           Le paiement par Mobile Money ouvre très bientôt.
         </p>
       )}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className={`grid gap-4 ${packs.length > 1 ? "sm:grid-cols-3" : "max-w-sm"}`}>
         {packs.map((p) => {
           const perPlan = Math.round(p.price_xaf / p.credits);
           return (
@@ -70,7 +70,7 @@ export function BuyForm({
                 name="pack"
                 value={p.code}
                 disabled={!open || pending}
-                className={buttonClass(p.code === "pro" ? "primary" : "secondary", "mt-4 w-full")}
+                className={buttonClass(packs.length === 1 || p.code === "pro" ? "primary" : "secondary", "mt-4 w-full")}
               >
                 {pending ? "Ouverture du paiement…" : "Payer par Mobile Money"}
               </button>

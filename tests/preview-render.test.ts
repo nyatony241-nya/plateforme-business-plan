@@ -19,7 +19,7 @@ describe("rendu de l'aperçu", () => {
 
   it("montre le début sous filigrane, verrouille le reste sans son texte", () => {
     const html = renderToStaticMarkup(createElement(PlanDocumentView, { ...props, doc: previewDocument(SAMPLE_DOC), preview: true }));
-    expect(html).toContain("APER");
+    expect(html).toContain('data-filigrane="afribiz"');
     expect(html).toContain(SAMPLE_DOC.resume.slice(0, 30));
     expect(html).toContain("Calendrier des 90 premiers jours");
     expect(html).not.toContain(SAMPLE_DOC.conclusion.slice(0, 30));
@@ -28,7 +28,7 @@ describe("rendu de l'aperçu", () => {
 
   it("affiche tout, sans filigrane, une fois débloqué", () => {
     const html = renderToStaticMarkup(createElement(PlanDocumentView, { ...props, doc: SAMPLE_DOC }));
-    expect(html).not.toContain("APER%C3%87U");
+    expect(html).not.toContain("data-filigrane");
     expect(html).toContain(SAMPLE_DOC.conclusion.slice(0, 30));
   });
 });
