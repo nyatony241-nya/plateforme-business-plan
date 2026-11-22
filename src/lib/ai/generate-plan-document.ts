@@ -58,7 +58,12 @@ const aiSchema = z.object({
       categorie: z
         .string()
         .describe(
-          "1 à 3 mots ANGLAIS pour le type de commerce, plus large et facile à photographier. Ex. chaussettes : « clothing store » ; tresses : « hair salon » ; pain : « bakery ».",
+          "1 ou 2 mots ANGLAIS pour le lieu du commerce, facile à photographier. Ex. chaussettes : « clothing shop » ; tresses : « hair salon » ; pain : « bakery ».",
+        ),
+      metier: z
+        .array(z.string())
+        .describe(
+          "3 à 6 mots ANGLAIS que l'on voit sur les photos de ce commerce. Ex. chaussettes : [\"clothing\", \"clothes\", \"fabric\", \"textile\", \"fashion\"] ; tresses : [\"hair\", \"salon\", \"hairdresser\", \"braids\"].",
         ),
       couverture: z.string().describe("L'activité en action : le vendeur ou l'artisan avec le produit, dans sa boutique, son étal ou son atelier."),
       projet: z.string().describe("Le produit ou le service lui-même, bien visible, en gros plan."),
@@ -74,18 +79,20 @@ const aiSchema = z.object({
 export function photoBrief(photos: {
   motsCles: string[];
   categorie?: string;
+  metier?: string[];
   couverture: string;
   projet: string;
   marche: string;
   marketing: string;
 }) {
-  const keywords = [
-    ...new Set(
-      photos.motsCles
-        .map((k) => k.toLowerCase().replace(/[^a-z\s-]/g, "").trim())
-        .filter((k) => k.length >= 3 && k.length <= 30),
-    ),
-  ].slice(0, 6);
+  const words = (list: string[] = []) =>
+    [
+      ...new Set(
+        list.map((k) => k.toLowerCase().replace(/[^a-z\s-]/g, "").trim()).filter((k) => k.length >= 3 && k.length <= 30),
+      ),
+    ].slice(0, 6);
+  const keywords = words(photos.motsCles);
+  const trade = words(photos.metier);
   const withSubject = (query: string) => {
     const q = clean(query, 80);
     if (keywords.length === 0 || keywords.some((k) => q.toLowerCase().includes(k))) return q;
@@ -95,6 +102,7 @@ export function photoBrief(photos: {
   return {
     photoKeywords: keywords,
     ...(category.length >= 3 ? { photoCategory: category } : {}),
+    ...(trade.length > 0 ? { photoTrade: trade } : {}),
     photoQueries: {
       couverture: withSubject(photos.couverture),
       projet: withSubject(photos.projet),

@@ -58,11 +58,12 @@ export async function writeBusinessPlan(projectId: string): Promise<FormState> {
       parsed.data,
       results.realiste,
     );
-    const photos = await findPlanPhotos(
-      out.document.photoQueries ?? {},
-      out.document.photoKeywords ?? [],
-      out.document.photoCategory,
-    );
+    const photos = await findPlanPhotos(out.document.photoQueries ?? {}, {
+      keywords: out.document.photoKeywords ?? [],
+      category: out.document.photoCategory,
+      trade: out.document.photoTrade ?? [],
+      online: project.mode === "en_ligne" || project.mode === "mixte",
+    });
     await upsertPlanDocument(projectId, { ...out.document, photos });
     await logAiRun({
       projectId,

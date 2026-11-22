@@ -149,7 +149,10 @@ describe("photos fidèles à l'activité", () => {
         }),
       ),
     );
-    const photos = await findPlanPhotos({ marche: "african woman buying socks", projet: "colorful socks display" }, ["sock", "socks"]);
+    const photos = await findPlanPhotos(
+      { marche: "african woman buying socks", projet: "colorful socks display" },
+      { keywords: ["sock", "socks"] },
+    );
     expect(photos.projet?.id).toBe("rayon");
     expect(photos.marche?.id).toBe("client");
   });
@@ -166,7 +169,7 @@ describe("photos fidèles à l'activité", () => {
     vi.stubGlobal("fetch", fetchMock);
     const photos = await findPlanPhotos(
       { couverture: "african man selling socks shop", marche: "african woman buying socks", marketing: "socks smartphone" },
-      ["sock", "socks"],
+      { keywords: ["sock", "socks"] },
     );
     expect(photos.couverture?.id).toBe("seul");
     expect(photos.marche).toBeUndefined();
@@ -184,8 +187,12 @@ describe("photos fidèles à l'activité", () => {
       }),
     );
     vi.stubGlobal("fetch", fetchMock);
-    const photos = await findPlanPhotos({ marche: "african woman buying socks" }, ["sock", "socks"], "clothing store");
-    expect(fetchMock.mock.calls.some(([url]) => url.includes("african%20clothing%20store%20customers%20shopping"))).toBe(true);
+    const photos = await findPlanPhotos(
+      { marche: "african woman buying socks" },
+      { keywords: ["sock", "socks"], category: "clothing store", trade: ["clothing", "clothes"] },
+    );
+    // Une seule recherche courte suffit quand elle trouve la bonne scène.
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([expect.stringContaining("query=african%20clothing%20store&")]);
     expect(photos.marche?.id).toBe("scene");
   });
 
@@ -194,6 +201,7 @@ describe("photos fidèles à l'activité", () => {
     const brief = photoBrief({
       motsCles: ["Sock", "socks", "x"],
       categorie: "Clothing store",
+      metier: ["Clothing", "fabric"],
       couverture: "african shop owner counter",
       projet: "colorful socks display",
       marche: "african clients street",
@@ -201,6 +209,7 @@ describe("photos fidèles à l'activité", () => {
     });
     expect(brief.photoKeywords).toEqual(["sock", "socks"]);
     expect(brief.photoCategory).toBe("clothing store");
+    expect(brief.photoTrade).toEqual(["clothing", "fabric"]);
     expect(brief.photoQueries.couverture).toBe("sock african shop owner counter");
     expect(brief.photoQueries.projet).toBe("colorful socks display");
   });

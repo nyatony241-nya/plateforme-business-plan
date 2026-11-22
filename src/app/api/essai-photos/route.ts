@@ -11,8 +11,7 @@ export async function GET(request: Request) {
   const picked = q.get("pick")
     ? await findPlanPhotos(
         { couverture: q.get("couverture") ?? "", projet: q.get("projet") ?? "", marche: q.get("marche") ?? "", marketing: q.get("marketing") ?? "" },
-        keywords,
-        category,
+        { keywords, category, trade: q.getAll("t"), online: q.get("online") === "1" },
       )
     : {};
   const key = process.env.UNSPLASH_ACCESS_KEY?.trim();

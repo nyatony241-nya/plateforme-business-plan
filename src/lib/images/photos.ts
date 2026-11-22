@@ -106,19 +106,13 @@ export function africanize(query: string) {
 
 /** Ce que chaque section doit montrer, en plus du produit ou du service. */
 const SLOT_HINTS: Record<PhotoSlot, string[]> = {
-  couverture: ["shop", "store", "market", "seller", "vendor", "salon", "stall", "owner", "business", "workshop", "shopkeeper"],
-  projet: ["display", "shelf", "closeup", "close", "product", "detail", "pile", "stack", "rack"],
-  marche: ["customer", "client", "shopping", "shopper", "buying", "buyer", "people", "crowd", "family"],
-  marketing: ["phone", "smartphone", "social", "online", "laptop", "poster", "sign", "advert", "storefront"],
+  couverture: ["shop", "store", "market", "seller", "selling", "vendor", "salon", "stall", "owner", "workshop", "sale", "display"],
+  projet: ["display", "shelf", "closeup", "close", "product", "detail", "pile", "stack", "rack", "folded"],
+  marche: ["customer", "client", "shopping", "shopper", "buying", "buyer", "browse", "people", "crowd", "market", "woman", "man"],
+  marketing: ["phone", "smartphone", "social", "online", "laptop", "poster", "advert", "storefront", "card"],
 };
-/** Scène recherchée avec le type de commerce, quand le produit seul ne suffit pas. */
-const SLOT_SCENE: Partial<Record<PhotoSlot, string>> = {
-  couverture: "shop owner",
-  marche: "customers shopping",
-  marketing: "smartphone",
-};
-const AFRICAN = ["african", "africa", "black", "gabon", "nigeria", "ghana", "kenya", "senegal", "cameroon", "congo"];
-/** Mots trop généraux pour désigner un type de commerce. */
+const AFRICAN = ["african", "africa", "black", "gabon", "nigeria", "ghana", "kenya", "senegal", "cameroon", "congo", "wax"];
+/** Mots trop généraux pour désigner un commerce. */
 const GENERIC = new Set(["store", "shop", "business", "service", "company", "small", "local"]);
 
 const words = (text: string) =>
@@ -134,51 +128,83 @@ const mentions = (text: string, list: string[]) => {
   return list.some((k) => words(k).every((part) => w.some((x) => sameWord(x, part))));
 };
 
+export type PhotoTerms = {
+  /** Ce que l'entreprise vend (sock, socks). */
+  keywords: string[];
+  /** Lieu du commerce (clothing shop). */
+  category?: string;
+  /** Mots visibles sur les photos de ce commerce (clothing, fabric…). */
+  trade?: string[];
+  /** Vente en ligne : la section marketing montre l'achat sur smartphone. */
+  online?: boolean;
+};
+
 /**
  * Pertinence d'une photo pour une section, d'après sa description : ce que l'entreprise vend
- * (10) ou à défaut son type de commerce (6), la scène de la section (5), l'Afrique (3).
- * 0 = sans rapport avec l'activité.
+ * (10) ou son métier (6), la scène de la section (5), l'Afrique (3), et un bonus (2) pour les
+ * premiers résultats d'une recherche précise sur ce commerce en Afrique.
  */
-export function photoScore(
-  photo: Pick<PlanPhoto, "alt">,
-  slot: PhotoSlot,
-  keywords: string[],
-  category?: string,
-) {
+export function photoScore(photo: Pick<PlanPhoto, "alt">, slot: PhotoSlot, terms: PhotoTerms, trusted = false) {
   const alt = photo.alt ?? "";
-  const categoryWords = (category ?? "").split(/\s+/).filter((w) => w.length >= 3 && !GENERIC.has(w));
+  const trade = [
+    ...(terms.trade ?? []),
+    ...(terms.category ?? "").split(/\s+/).filter((w) => w.length >= 3 && !GENERIC.has(w)),
+  ];
   const business =
-    keywords.length === 0 || mentions(alt, keywords)
-      ? 10
-      : slot !== "projet" && categoryWords.length > 0 && mentions(alt, categoryWords)
-        ? 6
-        : 0;
-  if (business === 0) return 0;
-  return business + (mentions(alt, SLOT_HINTS[slot]) ? 5 : 0) + (mentions(alt, AFRICAN) ? 3 : 0);
+    terms.keywords.length === 0 || mentions(alt, terms.keywords) ? 10 : trade.length > 0 && mentions(alt, trade) ? 6 : 0;
+  return business + (mentions(alt, SLOT_HINTS[slot]) ? 5 : 0) + (mentions(alt, AFRICAN) ? 3 : 0) + (trusted ? 2 : 0);
 }
 
-function bestPhoto(photos: PlanPhoto[], slot: PhotoSlot, keywords: string[], category: string | undefined, used: Set<string>) {
-  let best: { photo: PlanPhoto; score: number } | null = null;
-  for (const photo of photos) {
-    if (used.has(String(photo.id))) continue;
-    const score = photoScore(photo, slot, keywords, category);
-    if (score > 0 && (!best || score > best.score)) best = { photo, score };
-  }
-  return best;
+/** Seuil d'une photo acceptable : le produit pour « projet », sinon l'activité ou une scène fiable. */
+const acceptable = (slot: PhotoSlot, score: number) => (slot === "projet" ? score >= 10 : score >= 7);
+
+type Search = { query: string; trusted: boolean };
+
+/**
+ * Recherches courtes (les longues ne trouvent presque rien), d'abord en Afrique, partagées entre
+ * les sections pour économiser le quota de la banque d'images (50 requêtes par heure en mode démo).
+ */
+function searchesFor(slot: PhotoSlot, aiQuery: string, terms: PhotoTerms): Search[] {
+  const subject = terms.keywords.find((k) => k.endsWith("s")) ?? terms.keywords[0];
+  const place = terms.category;
+  const list: (Search | null)[] =
+    slot === "projet"
+      ? [subject ? { query: subject, trusted: false } : null, { query: aiQuery, trusted: false }]
+      : slot === "couverture"
+        ? [
+            place ? { query: africanize(place), trusted: true } : null,
+            { query: africanize(aiQuery), trusted: false },
+            // En couverture, le produit seul vaut mieux qu'aucune image.
+            subject ? { query: subject, trusted: false } : null,
+          ]
+        : slot === "marche"
+          ? [
+              place ? { query: africanize(place), trusted: true } : null,
+              { query: "african shoppers", trusted: false },
+              { query: africanize(aiQuery), trusted: false },
+            ]
+          : [
+              {
+                query: terms.online ? "african woman smartphone shopping" : place ? africanize(`${place} storefront`) : "african shop storefront",
+                trusted: true,
+              },
+              { query: africanize(aiQuery), trusted: false },
+            ];
+  // En dernier recours, la recherche de l'IA telle quelle.
+  list.push({ query: aiQuery, trusted: false });
+  const seen = new Set<string>();
+  return list.filter((s): s is Search => {
+    if (!s || !s.query.trim() || seen.has(s.query)) return false;
+    seen.add(s.query);
+    return true;
+  });
 }
 
 /**
- * Une photo par section, qui montre l'activité et la scène de la section : on compare les
- * résultats de la recherche de la section et d'une scène du même type de commerce (en Afrique
- * d'abord), puis on se replie sur le produit seul. Une section sans photo pertinente reste sans
- * photo plutôt que d'afficher une image hors sujet ; seule la section marketing accepte une
- * scène de promotion générique (smartphone, vitrine).
+ * Une photo par section, qui montre l'activité dans la scène de la section. Une section sans
+ * photo pertinente reste sans photo plutôt que d'afficher une image hors sujet.
  */
-export async function findPlanPhotos(
-  queries: Partial<Record<PhotoSlot, string>>,
-  keywords: string[] = [],
-  category?: string,
-) {
+export async function findPlanPhotos(queries: Partial<Record<PhotoSlot, string>>, terms: PhotoTerms = { keywords: [] }) {
   const photos: Partial<Record<PhotoSlot, PlanPhoto>> = {};
   if (!photoProvider()) return photos;
   const used = new Set<string>();
@@ -187,32 +213,24 @@ export async function findPlanPhotos(
     if (!cache.has(q)) cache.set(q, searchPhotos(q).catch((error) => (console.error("Recherche de photo impossible", error), [])));
     return cache.get(q)!;
   };
-  const subject = keywords.find((k) => k.endsWith("s")) ?? keywords[0];
-  const pick = async (list: string[], slot: PhotoSlot) => {
-    let best: { photo: PlanPhoto; score: number } | null = null;
-    for (const q of list) {
-      const candidate = bestPhoto(await search(q), slot, keywords, category, used);
-      if (candidate && (!best || candidate.score > best.score)) best = candidate;
-    }
-    return best?.photo ?? null;
-  };
 
   for (const slot of PHOTO_SLOTS) {
     const query = queries[slot]?.trim();
     if (!query) continue;
-    const scene = SLOT_SCENE[slot];
-    const first = [africanize(query), ...(category && scene ? [africanize(`${category} ${scene}`)] : [])];
-    let photo =
-      (await pick(first, slot)) ??
-      (await pick([...new Set([query, ...(subject ? [africanize(subject), subject] : [])])], slot));
-    if (!photo && slot === "marketing") {
-      photo = (await search(africanize(query))).find(
-        (p) => !used.has(String(p.id)) && mentions(p.alt ?? "", SLOT_HINTS.marketing),
-      ) ?? null;
+    let best: { photo: PlanPhoto; score: number } | null = null;
+    for (const s of searchesFor(slot, query, terms)) {
+      const results = await search(s.query);
+      for (const [rank, photo] of results.entries()) {
+        if (used.has(String(photo.id))) continue;
+        const score = photoScore(photo, slot, terms, s.trusted && rank < 5);
+        if (acceptable(slot, score) && (!best || score > best.score)) best = { photo, score };
+      }
+      // Une photo qui montre l'activité dans la bonne scène suffit : inutile de chercher plus.
+      if (best && best.score >= 15) break;
     }
-    if (photo) {
-      photos[slot] = photo;
-      used.add(String(photo.id));
+    if (best) {
+      photos[slot] = best.photo;
+      used.add(String(best.photo.id));
     }
   }
   return photos;
