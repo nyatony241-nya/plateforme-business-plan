@@ -15,5 +15,14 @@ export async function GET(request: Request) {
         category,
       )
     : {};
-  return Response.json({ raw, picked: Object.fromEntries(Object.entries(picked).map(([k, v]) => [k, `${v.id} | ${v.alt}`])) });
+  const key = process.env.UNSPLASH_ACCESS_KEY?.trim();
+  const probe = key
+    ? await fetch("https://api.unsplash.com/search/photos?query=socks&per_page=1", {
+        headers: { Authorization: `Client-ID ${key}`, "Accept-Version": "v1" },
+      })
+    : null;
+  const limits = probe
+    ? { limite: probe.headers.get("x-ratelimit-limit"), restant: probe.headers.get("x-ratelimit-remaining") }
+    : null;
+  return Response.json({ limits, raw, picked: Object.fromEntries(Object.entries(picked).map(([k, v]) => [k, `${v.id} | ${v.alt}`])) });
 }
