@@ -97,7 +97,7 @@ function Watermark() {
 }
 
 /** Partie verrouillée : son titre et ce qu'elle contient, sans son texte. */
-function LockedSection({ n }: { n: number }) {
+function LockedSection({ n, pending = false }: { n: number; pending?: boolean }) {
   const { emoji, title } = SECTIONS[n - 1];
   return (
     <section className="mt-8 break-inside-avoid rounded-xl border border-dashed border-line-strong bg-paper px-5 py-4">
@@ -108,7 +108,7 @@ function LockedSection({ n }: { n: number }) {
           {title}
         </span>
         <span aria-hidden className="ml-auto text-base">
-          🔒
+          {pending ? "⏳" : "🔒"}
         </span>
       </h2>
       <ul className="mt-2 flex flex-col gap-1 text-sm text-muted">
@@ -125,13 +125,13 @@ function LockedSection({ n }: { n: number }) {
   );
 }
 
-export function PlanDocumentView(input: PlanViewInput & { preview?: boolean }) {
-  const { doc, preview = false } = input;
+export function PlanDocumentView(input: PlanViewInput & { preview?: boolean; pending?: boolean }) {
+  const { doc, preview = false, pending = false } = input;
   const v = buildPlanView(input);
 
   return (
     <article className="relative rounded-2xl border border-line bg-surface p-6 sm:p-10 print:rounded-none print:border-0 print:p-0">
-      {preview ? <Watermark /> : null}
+      {preview && !pending ? <Watermark /> : null}
       <header>
         <Photo photo={v.photos.couverture} tall />
         <p className={`text-xs font-semibold uppercase tracking-[0.14em] text-gold ${v.photos.couverture ? "mt-6" : ""}`}>
@@ -172,7 +172,7 @@ export function PlanDocumentView(input: PlanViewInput & { preview?: boolean }) {
       {preview ? (
         <>
           {SECTIONS.slice(PREVIEW_SECTIONS).map((_, i) => (
-            <LockedSection key={i} n={PREVIEW_SECTIONS + i + 1} />
+            <LockedSection key={i} n={PREVIEW_SECTIONS + i + 1} pending={pending} />
           ))}
         </>
       ) : (

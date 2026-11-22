@@ -145,6 +145,8 @@ export type PhotoTerms = {
   trade?: string[];
   /** Vente en ligne : la section marketing montre l'achat sur smartphone. */
   online?: boolean;
+  /** Photos déjà dans le plan (aperçu), à ne pas reprendre. */
+  exclude?: string[];
 };
 
 /**
@@ -223,7 +225,7 @@ function searchesFor(slot: PhotoSlot, aiQuery: string, terms: PhotoTerms): Searc
 export async function findPlanPhotos(queries: Partial<Record<PhotoSlot, string>>, terms: PhotoTerms = { keywords: [] }) {
   const photos: Partial<Record<PhotoSlot, PlanPhoto>> = {};
   if (!photoProvider()) return photos;
-  const used = new Set<string>();
+  const used = new Set<string>(terms.exclude ?? []);
   const cache = new Map<string, Promise<PlanPhoto[]>>();
   const search = (q: string) => {
     if (!cache.has(q)) cache.set(q, searchPhotos(q).catch((error) => (console.error("Recherche de photo impossible", error), [])));

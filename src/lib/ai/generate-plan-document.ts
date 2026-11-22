@@ -1,17 +1,47 @@
-import { usageFrom } from "@/lib/ai/pricing";
 import "server-only";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import type { PlanResult } from "@/engine";
 import { MODE_LABEL, STAFF_LABEL, type ProjectContext } from "@/lib/ai/generate-assumptions";
 import { DEFAULT_MODEL, resolveModel } from "@/lib/ai/model";
+import { addUsage, usageFrom } from "@/lib/ai/pricing";
 import { INVESTMENT_KINDS, type Assumptions } from "@/lib/assumptions";
 import { CHANNELS, planDocumentSchema, type PlanDocument } from "@/lib/business-plan";
 import { formatMonth } from "@/lib/format";
 
-const aiSchema = z.object({
+/** Premières pages : rédigées pour tous, même sans paiement. */
+const previewSchema = z.object({
   resume: z.string().describe("Résumé du projet pour un banquier, 4 à 6 phrases."),
   projet: z.string().describe("L'offre, les clients visés, ce qui distingue le projet. 2 courts paragraphes."),
+  photos: z
+    .object({
+      motsCles: z
+        .array(z.string())
+        .describe(
+          "2 à 4 mots ANGLAIS qui désignent ce que l'entreprise vend, au singulier et au pluriel. Ex. chaussettes : [\"sock\", \"socks\"] ; salon de tresses : [\"hair\", \"braids\", \"hairdresser\"] ; boulangerie : [\"bread\", \"bakery\"].",
+        ),
+      categorie: z
+        .string()
+        .describe(
+          "1 ou 2 mots ANGLAIS pour le lieu du commerce, facile à photographier. Ex. chaussettes : « clothing shop » ; tresses : « hair salon » ; pain : « bakery ».",
+        ),
+      metier: z
+        .array(z.string())
+        .describe(
+          "3 à 6 mots ANGLAIS que l'on voit sur les photos de ce commerce. Ex. chaussettes : [\"clothing\", \"clothes\", \"fabric\", \"textile\", \"fashion\"] ; tresses : [\"hair\", \"salon\", \"hairdresser\", \"braids\"].",
+        ),
+      couverture: z.string().describe("L'activité en action : le vendeur ou l'artisan avec le produit, dans sa boutique, son étal ou son atelier."),
+      projet: z.string().describe("Le produit ou le service lui-même, bien visible, en gros plan."),
+      marche: z.string().describe("Des clients qui achètent ou utilisent ce produit ou ce service."),
+      marketing: z.string().describe("La promotion de ce produit : smartphone qui le montre, vitrine, affiche, publication."),
+    })
+    .describe(
+      "Recherches de photos libres de droit, EN ANGLAIS, 3 à 6 mots, une scène concrète. Chaque recherche contient l'un des mots-clés (le produit ou le service vendu) et, sauf pour « projet », le mot « african ». Exemples pour des chaussettes : « african man selling socks shop », « colorful socks display », « african woman buying socks », « socks product photo smartphone ». Aucune marque.",
+    ),
+});
+
+/** Le reste du business plan : rédigé seulement une fois le plan débloqué. */
+const restSchema = z.object({
   marche: z.object({
     clientele: z.string().describe("Qui achète, pourquoi, à quelle fréquence. Sans statistique."),
     concurrence: z.string().describe("Types de concurrents probables dans la zone et comment se distinguer."),
@@ -49,31 +79,6 @@ const aiSchema = z.object({
     .array(z.string())
     .describe("Étapes pour créer l'entreprise et ouvrir, dans l'ordre, sans frais ni délais ni téléphone"),
   conclusion: z.string().describe("Conclusion en 3 ou 4 phrases."),
-  photos: z
-    .object({
-      motsCles: z
-        .array(z.string())
-        .describe(
-          "2 à 4 mots ANGLAIS qui désignent ce que l'entreprise vend, au singulier et au pluriel. Ex. chaussettes : [\"sock\", \"socks\"] ; salon de tresses : [\"hair\", \"braids\", \"hairdresser\"] ; boulangerie : [\"bread\", \"bakery\"].",
-        ),
-      categorie: z
-        .string()
-        .describe(
-          "1 ou 2 mots ANGLAIS pour le lieu du commerce, facile à photographier. Ex. chaussettes : « clothing shop » ; tresses : « hair salon » ; pain : « bakery ».",
-        ),
-      metier: z
-        .array(z.string())
-        .describe(
-          "3 à 6 mots ANGLAIS que l'on voit sur les photos de ce commerce. Ex. chaussettes : [\"clothing\", \"clothes\", \"fabric\", \"textile\", \"fashion\"] ; tresses : [\"hair\", \"salon\", \"hairdresser\", \"braids\"].",
-        ),
-      couverture: z.string().describe("L'activité en action : le vendeur ou l'artisan avec le produit, dans sa boutique, son étal ou son atelier."),
-      projet: z.string().describe("Le produit ou le service lui-même, bien visible, en gros plan."),
-      marche: z.string().describe("Des clients qui achètent ou utilisent ce produit ou ce service."),
-      marketing: z.string().describe("La promotion de ce produit : smartphone qui le montre, vitrine, affiche, publication."),
-    })
-    .describe(
-      "Recherches de photos libres de droit, EN ANGLAIS, 3 à 6 mots, une scène concrète. Chaque recherche contient l'un des mots-clés (le produit ou le service vendu) et, sauf pour « projet », le mot « african ». Exemples pour des chaussettes : « african man selling socks shop », « colorful socks display », « african woman buying socks », « socks product photo smartphone ». Aucune marque.",
-    ),
 });
 
 /** Mots-clés nettoyés et recherches qui nomment toutes le produit ou service vendu. */
@@ -148,8 +153,6 @@ export function buildDocumentPrompt(ctx: ProjectContext, a: Assumptions, realist
       be ? `, premier mois bénéficiaire en ${formatMonth(realiste.months[be - 1].month)}` : ""
     }.`,
     a.generation?.summary ? `- Résumé du modèle : ${a.generation.summary}` : "",
-    "",
-    "Rédige le business plan.",
   ]
     .filter((line) => line !== "")
     .join("\n");
@@ -159,26 +162,26 @@ const clean = (value: string, max: number) => value.trim().slice(0, max);
 /** Texte en paragraphes : rétablit un saut de ligne oublié entre deux phrases collées (« cadeaux.Le projet »). */
 export const prose = (value: string, max: number) => clean(value.replace(/([a-zà-ÿ][.!?])(?=[A-ZÀ-Ý])/g, "$1\n"), max);
 
-/** Appelle l'IA et renvoie un document validé (bornes, notes 1 à 5, parts entières). */
-export async function generatePlanDocument(
-  ctx: ProjectContext,
-  a: Assumptions,
-  realiste: PlanResult,
-  model: string = DEFAULT_MODEL,
-) {
-  const started = Date.now();
-  const result = await generateText({
-    model: resolveModel(model),
-    instructions: buildDocumentInstructions(),
-    prompt: buildDocumentPrompt(ctx, a, realiste),
-    output: Output.object({ schema: aiSchema }),
-    maxRetries: 1,
-    timeout: 110_000,
-  });
-  const out = result.output;
-  const document: PlanDocument = planDocumentSchema.parse({
-    resume: prose(out.resume, 1500),
-    projet: prose(out.projet, 2000),
+type PreviewOutput = z.infer<typeof previewSchema>;
+type RestOutput = z.infer<typeof restSchema>;
+
+/** Parties rédigées après paiement, vides dans un aperçu. */
+const EMPTY_REST = {
+  marche: { clientele: "", concurrence: "", tendances: "" },
+  emplacement: { analyse: "", criteres: [] },
+  marketing: { message: "", canaux: [], calendrier: [] },
+  risques: [],
+  demarches: [],
+  conclusion: "",
+};
+
+function previewFields(out: PreviewOutput) {
+  return { resume: prose(out.resume, 1500), projet: prose(out.projet, 2000), ...photoBrief(out.photos) };
+}
+
+/** Parties suivantes, bornées et nettoyées (notes 1 à 5, parts entières). */
+export function restFields(out: RestOutput) {
+  return {
     marche: {
       clientele: prose(out.marche.clientele, 1500),
       concurrence: prose(out.marche.concurrence, 1500),
@@ -207,12 +210,85 @@ export async function generatePlanDocument(
     risques: out.risques.slice(0, 6).map((r) => ({ risque: clean(r.risque, 200), parade: clean(r.parade, 400) })),
     demarches: out.demarches.slice(0, 8).map((d) => clean(d, 300)).filter(Boolean),
     conclusion: prose(out.conclusion, 1200),
-    ...photoBrief(out.photos),
+  };
+}
+
+async function callAi<T extends z.ZodType>(schema: T, prompt: string, model: string, timeout: number) {
+  const result = await generateText({
+    model: resolveModel(model),
+    instructions: buildDocumentInstructions(),
+    prompt,
+    output: Output.object({ schema }),
+    maxRetries: 1,
+    timeout,
+  });
+  return { output: result.output as z.infer<T>, usage: usageFrom(result.usage) };
+}
+
+/**
+ * Aperçu : seuls le résumé, le projet et les recherches de photos sont rédigés.
+ * Le reste ne coûte rien tant que le client n'a pas payé.
+ */
+export async function generatePlanPreview(ctx: ProjectContext, a: Assumptions, realiste: PlanResult, model = DEFAULT_MODEL) {
+  const started = Date.now();
+  const { output, usage } = await callAi(
+    previewSchema,
+    `${buildDocumentPrompt(ctx, a, realiste)}\nRédige seulement le résumé, la présentation du projet et les recherches de photos.`,
+    model,
+    60_000,
+  );
+  const document: PlanDocument = planDocumentSchema.parse({
+    ...previewFields(output),
+    ...EMPTY_REST,
+    stage: "apercu",
     generation: { model, generatedAt: new Date().toISOString() },
   });
-  return {
-    document,
-    durationMs: Date.now() - started,
-    usage: usageFrom(result.usage),
-  };
+  return { document, durationMs: Date.now() - started, usage };
+}
+
+/** Rédige la suite d'un aperçu (marché, emplacement, marketing, risques, démarches, conclusion). */
+export async function generatePlanRest(
+  ctx: ProjectContext,
+  a: Assumptions,
+  realiste: PlanResult,
+  preview: Pick<PlanDocument, "resume" | "projet">,
+  model = DEFAULT_MODEL,
+) {
+  const started = Date.now();
+  const { output, usage } = await callAi(
+    restSchema,
+    [
+      buildDocumentPrompt(ctx, a, realiste),
+      "",
+      "Déjà rédigé (à prolonger, sans le répéter) :",
+      `Résumé : ${preview.resume}`,
+      `Le projet : ${preview.projet}`,
+      "",
+      "Rédige maintenant le marché, l'emplacement, le marketing, les risques, les démarches et la conclusion.",
+    ].join("\n"),
+    model,
+    100_000,
+  );
+  return { fields: restFields(output), durationMs: Date.now() - started, usage };
+}
+
+/** Business plan complet en une fois (plan déjà débloqué) : les deux rédactions en parallèle. */
+export async function generatePlanDocument(ctx: ProjectContext, a: Assumptions, realiste: PlanResult, model = DEFAULT_MODEL) {
+  const started = Date.now();
+  const [preview, rest] = await Promise.all([
+    callAi(previewSchema, `${buildDocumentPrompt(ctx, a, realiste)}\nRédige seulement le résumé, la présentation du projet et les recherches de photos.`, model, 60_000),
+    callAi(
+      restSchema,
+      `${buildDocumentPrompt(ctx, a, realiste)}\nRédige le marché, l'emplacement, le marketing, les risques, les démarches et la conclusion.`,
+      model,
+      100_000,
+    ),
+  ]);
+  const document: PlanDocument = planDocumentSchema.parse({
+    ...previewFields(preview.output),
+    ...restFields(rest.output),
+    stage: "complet",
+    generation: { model, generatedAt: new Date().toISOString() },
+  });
+  return { document, durationMs: Date.now() - started, usage: addUsage(preview.usage, rest.usage) };
 }

@@ -3,6 +3,8 @@ import { roundXaf } from "@/engine";
 import type { Assumptions } from "@/lib/assumptions";
 
 const text = (max: number) => z.string().trim().min(1).max(max);
+/** Texte des parties rédigées après paiement : vide tant que le document n'est qu'un aperçu. */
+const laterText = (max: number) => z.string().trim().max(max);
 
 export const CHANNELS = ["Facebook", "TikTok", "WhatsApp", "Instagram", "Bouche-à-oreille", "Affichage", "Autre"] as const;
 
@@ -30,22 +32,26 @@ export type PhotoSlot = (typeof PHOTO_SLOTS)[number];
 export const planDocumentSchema = z.object({
   resume: text(1500),
   projet: text(2000),
-  marche: z.object({ clientele: text(1500), concurrence: text(1500), tendances: text(1500) }),
+  marche: z.object({ clientele: laterText(1500), concurrence: laterText(1500), tendances: laterText(1500) }),
   emplacement: z.object({
-    analyse: text(1500),
+    analyse: laterText(1500),
     criteres: z.array(z.object({ critere: text(80), note: z.number().int().min(1).max(5), commentaire: text(300) })).max(6),
   }),
   marketing: z.object({
-    message: text(600),
+    message: laterText(600),
     canaux: z
       .array(z.object({ canal: z.enum(CHANNELS), action: text(400), part: z.number().int().min(0).max(100) }))
-      .min(1)
       .max(6),
-    calendrier: z.array(z.object({ periode: text(40), actions: z.array(text(200)).min(1).max(5) })).min(1).max(8),
+    calendrier: z.array(z.object({ periode: text(40), actions: z.array(text(200)).min(1).max(5) })).max(8),
   }),
-  risques: z.array(z.object({ risque: text(200), parade: text(400) })).min(1).max(6),
-  demarches: z.array(text(300)).min(1).max(8),
-  conclusion: text(1200),
+  risques: z.array(z.object({ risque: text(200), parade: text(400) })).max(6),
+  demarches: z.array(text(300)).max(8),
+  conclusion: laterText(1200),
+  /**
+   * « apercu » : seules les premières pages sont rédigées (le reste l'est après paiement,
+   * pour ne rien dépenser si le client n'achète pas). Absent : document complet.
+   */
+  stage: z.enum(["apercu", "complet"]).optional(),
   /** Recherches de photos proposées par l'IA (en anglais), une par emplacement. */
   photoQueries: z.partialRecord(z.enum(PHOTO_SLOTS), z.string().max(80)).optional(),
   /** Mots anglais désignant ce que l'entreprise vend : une photo retenue doit en montrer un. */
@@ -59,6 +65,9 @@ export const planDocumentSchema = z.object({
 });
 
 export type PlanDocument = z.infer<typeof planDocumentSchema>;
+
+/** Le document a-t-il toutes ses parties rédigées ? */
+export const isCompleteDocument = (doc: Pick<PlanDocument, "stage">) => doc.stage !== "apercu";
 
 const MARKETING = /marketing|publicit|communication|promotion|r[ée]seaux|visibilit|flyer|affich/i;
 

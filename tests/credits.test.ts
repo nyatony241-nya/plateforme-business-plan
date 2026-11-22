@@ -52,3 +52,29 @@ describe("paiement Chariow", () => {
     expect(isPaidStatus(null)).toBe(false);
   });
 });
+
+describe("aperçu rédigé à moitié", () => {
+  it("accepte un document dont seules les premières pages sont rédigées", async () => {
+    const { planDocumentSchema, isCompleteDocument } = await import("@/lib/business-plan");
+    const doc = planDocumentSchema.parse({
+      ...previewDocument(SAMPLE_DOC),
+      stage: "apercu",
+    });
+    expect(isCompleteDocument(doc)).toBe(false);
+    expect(isCompleteDocument(SAMPLE_DOC)).toBe(true);
+  });
+
+  it("nettoie la suite rédigée après paiement", async () => {
+    const { restFields } = await import("@/lib/ai/generate-plan-document");
+    const rest = restFields({
+      marche: { clientele: "a", concurrence: "b", tendances: "c" },
+      emplacement: { analyse: "d", criteres: [{ critere: "Passage", note: 9, commentaire: "x" }] },
+      marketing: { message: "m", canaux: [{ canal: SAMPLE_DOC.marketing.canaux[0].canal, action: "y", part: 33.6 }], calendrier: [] },
+      risques: [{ risque: "r", parade: "p" }],
+      demarches: ["s"],
+      conclusion: "fin",
+    });
+    expect(rest.emplacement.criteres[0].note).toBe(5);
+    expect(rest.marketing.canaux[0].part).toBe(34);
+  });
+});

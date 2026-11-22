@@ -1,7 +1,7 @@
 import { recommendLegalForm } from "@/lib/creation-guide";
 import { computeScenarios } from "@/engine";
 import { assumptionsSchema, toPlanInput } from "@/lib/assumptions";
-import { planDocumentSchema } from "@/lib/business-plan";
+import { isCompleteDocument, planDocumentSchema } from "@/lib/business-plan";
 import { getCountryParams } from "@/lib/data/country-params";
 import { getCreationSummary } from "@/lib/data/creation";
 import { isPlanUnlocked } from "@/lib/data/credits";
@@ -47,6 +47,10 @@ export async function GET(_request: Request, ctx: RouteContext<"/projets/[id]/bu
   const doc = savedDocument ? planDocumentSchema.safeParse(savedDocument.data) : null;
   if (!assumptions?.success || !doc?.success) {
     return new Response("Le business plan n'est pas encore rédigé.", { status: 404 });
+  }
+  // La suite est encore en cours de rédaction : retour à la page, qui la termine.
+  if (!isCompleteDocument(doc.data)) {
+    return Response.redirect(new URL(`/projets/${id}/business-plan`, _request.url), 303);
   }
 
   const buffer = await businessPlanDocx({

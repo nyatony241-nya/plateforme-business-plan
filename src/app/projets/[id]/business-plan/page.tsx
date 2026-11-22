@@ -7,7 +7,7 @@ import { ConfigNotice } from "@/components/config-notice";
 import { ButtonLink, buttonClass } from "@/components/ui";
 import { computeScenarios } from "@/engine";
 import { assumptionsSchema, toPlanInput } from "@/lib/assumptions";
-import { planDocumentSchema } from "@/lib/business-plan";
+import { isCompleteDocument, planDocumentSchema } from "@/lib/business-plan";
 import { getCountryParams } from "@/lib/data/country-params";
 import { getCreationSummary } from "@/lib/data/creation";
 import { getCreditBalance, getCreditPacks, isPlanUnlocked } from "@/lib/data/credits";
@@ -21,6 +21,7 @@ import {
 } from "@/lib/data/projects";
 import { isSupabaseConfigured } from "@/lib/env";
 import { getCurrentUser } from "@/lib/supabase/server";
+import { CompleteRunner } from "./complete-runner";
 import { PlanDocumentView } from "./document";
 import { unlockPlanAction } from "./actions";
 import { PrintButton } from "./print-button";
@@ -75,6 +76,9 @@ export default async function BusinessPlanPage({
   const minimumWage =
     country.provenance.find((p) => p.code === "revenu_minimum_mensuel")
       ?.value ?? 150_000;
+  // Débloqué mais seulement l'aperçu rédigé : la suite s'écrit maintenant (payée).
+  const pending = unlocked && Boolean(doc?.success && !isCompleteDocument(doc.data));
+  const full = unlocked && !pending;
 
   return (
     <>
@@ -135,7 +139,8 @@ export default async function BusinessPlanPage({
                 </div>
               </section>
             ) : null}
-            {unlocked ? (
+            {pending ? <CompleteRunner projectId={id} /> : null}
+            {full ? (
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
               <p className="text-sm text-muted">
                 Pour le PDF, choisissez « Enregistrer en PDF » dans la fenêtre
@@ -152,7 +157,7 @@ export default async function BusinessPlanPage({
                 </a>
               </div>
             </div>
-            ) : (
+            ) : pending ? null : (
               <UnlockPanel projectId={id} balance={balance} fromPrice={fromPrice} />
             )}
             {/* Cadre d'impression : marges sur chaque page, sans l'adresse ni la date du navigateur. */}
@@ -175,8 +180,9 @@ export default async function BusinessPlanPage({
                 <tr>
                   <td>
                     <PlanDocumentView
-                      doc={unlocked ? doc.data : previewDocument(doc.data)}
-                      preview={!unlocked}
+                      doc={full ? doc.data : previewDocument(doc.data)}
+                      preview={!full}
+                      pending={pending}
                       a={assumptions.data}
                       results={computeScenarios(
                         toPlanInput(assumptions.data, country.params),
