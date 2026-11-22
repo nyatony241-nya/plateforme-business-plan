@@ -7,7 +7,7 @@ import { generatePlanDocument } from "@/lib/ai/generate-plan-document";
 import { DEFAULT_MODEL } from "@/lib/ai/model";
 import { assumptionsSchema, toPlanInput } from "@/lib/assumptions";
 import { getCountryParams } from "@/lib/data/country-params";
-import { findPlanPhotos } from "@/lib/images/photos";
+import { findPlanPhotos, reportDownload } from "@/lib/images/photos";
 import {
   countMyAiRunsSince,
   getAssumptions,
@@ -65,6 +65,8 @@ export async function writeBusinessPlan(projectId: string): Promise<FormState> {
       online: project.mode === "en_ligne" || project.mode === "mixte",
     });
     await upsertPlanDocument(projectId, { ...out.document, photos });
+    // Unsplash demande de signaler chaque photo utilisée.
+    await Promise.all(Object.values(photos).map((photo) => reportDownload(photo)));
     await logAiRun({
       projectId,
       purpose: PURPOSE,

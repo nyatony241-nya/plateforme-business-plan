@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { CashChart } from "@/components/cash-chart";
 import { SCENARIO_LABEL } from "@/engine";
 import type { PlanPhoto } from "@/lib/business-plan";
-import { SECTIONS, buildPlanView, paragraphs, photoSourceName, stars, type PlanViewInput } from "@/lib/business-plan-view";
+import { SECTIONS, buildPlanView, paragraphs, photoSourceName, photoSourceUrl, stars, type PlanViewInput } from "@/lib/business-plan-view";
 import { SCENARIO_COLOR, SCENARIO_ORDER } from "@/lib/scenario-colors";
 
 function Section({ n, children }: { n: number; children: ReactNode }) {
@@ -67,12 +67,12 @@ function Photo({ photo, tall = false }: { photo?: PlanPhoto; tall?: boolean }) {
         className={`w-full rounded-xl object-cover ${tall ? "aspect-[16/8] print:aspect-[16/7]" : "aspect-[16/6] print:aspect-[3/1]"}`}
       />
       <figcaption className="mt-1.5 text-xs text-muted">
-        📷 Photo :{" "}
-        <a href={photo.photographerUrl} className="underline-offset-2 hover:underline">
+        📷 Photo de{" "}
+        <a href={photo.photographerUrl} className="underline underline-offset-2">
           {photo.photographer}
         </a>{" "}
         sur{" "}
-        <a href={photo.pageUrl} className="underline-offset-2 hover:underline">
+        <a href={photoSourceUrl(photo)} className="underline underline-offset-2">
           {photoSourceName(photo)}
         </a>
       </figcaption>

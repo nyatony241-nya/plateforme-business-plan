@@ -34,6 +34,9 @@ export const stars = (note: number) => "★".repeat(note) + "☆".repeat(Math.ma
 
 /** Nom de la banque d'images d'une photo (Unsplash, Pexels). */
 export const photoSourceName = (photo: PlanPhoto) => PHOTO_SOURCES[photo.source];
+/** Lien vers la banque d'images exigé dans le crédit (« Photo de X sur Unsplash »). */
+export const photoSourceUrl = (photo: PlanPhoto) =>
+  photo.source === "unsplash" ? "https://unsplash.com/?utm_source=entreprendre&utm_medium=referral" : photo.pageUrl;
 
 export type PlanViewInput = {
   doc: PlanDocument;

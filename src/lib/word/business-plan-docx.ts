@@ -19,7 +19,7 @@ import {
   WidthType,
 } from "docx";
 import type { PhotoSlot, PlanPhoto } from "@/lib/business-plan";
-import { SECTIONS, buildPlanView, paragraphs, photoSourceName, stars, type PlanViewInput } from "@/lib/business-plan-view";
+import { SECTIONS, buildPlanView, paragraphs, photoSourceName, photoSourceUrl, stars, type PlanViewInput } from "@/lib/business-plan-view";
 import { reportDownload } from "@/lib/images/photos";
 
 const FOREST = "0F4D3A";
@@ -97,14 +97,14 @@ function photoBlock(item?: { photo: PlanPhoto; data: Uint8Array }, ratio = 627 /
     new Paragraph({
       spacing: { after: 160 },
       children: [
-        new TextRun({ text: "📷 Photo : ", size: 16, color: MUTED }),
+        new TextRun({ text: "📷 Photo de ", size: 16, color: MUTED }),
         new ExternalHyperlink({
           link: item.photo.photographerUrl,
           children: [new TextRun({ text: item.photo.photographer, size: 16, color: MUTED, underline: {} })],
         }),
         new TextRun({ text: " sur ", size: 16, color: MUTED }),
         new ExternalHyperlink({
-          link: item.photo.pageUrl,
+          link: photoSourceUrl(item.photo),
           children: [new TextRun({ text: photoSourceName(item.photo), size: 16, color: MUTED, underline: {} })],
         }),
       ],
