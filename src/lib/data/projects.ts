@@ -1,3 +1,4 @@
+import { aiCostUsd, type AiUsage } from "@/lib/ai/pricing";
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import type { NewProjectInput, ProjectContextInput } from "@/lib/validation";
@@ -112,8 +113,7 @@ export async function logAiRun(run: {
   model: string;
   status: "succes" | "echec";
   durationMs: number;
-  inputTokens: number | null;
-  outputTokens: number | null;
+  usage: AiUsage;
 }) {
   try {
     const supabase = await createClient();
@@ -123,8 +123,11 @@ export async function logAiRun(run: {
       model: run.model,
       status: run.status,
       duration_ms: run.durationMs,
-      input_tokens: run.inputTokens,
-      output_tokens: run.outputTokens,
+      input_tokens: run.usage.inputTokens,
+      output_tokens: run.usage.outputTokens,
+      reasoning_tokens: run.usage.reasoningTokens,
+      cached_input_tokens: run.usage.cachedInputTokens,
+      cost_usd: aiCostUsd(run.model, run.usage),
     });
   } catch {
     // Le journal ne doit pas faire échouer la génération.

@@ -1,5 +1,6 @@
 "use server";
 
+import { usageFromError } from "@/lib/ai/pricing";
 import { recommendLegalForm } from "@/lib/creation-guide";
 import { redirect } from "next/navigation";
 import { computeScenarios } from "@/engine";
@@ -74,8 +75,7 @@ export async function writeBusinessPlan(projectId: string): Promise<FormState> {
       model: DEFAULT_MODEL,
       status: "succes",
       durationMs: out.durationMs,
-      inputTokens: out.usage.inputTokens,
-      outputTokens: out.usage.outputTokens,
+      usage: out.usage,
     });
   } catch (error) {
     console.error("Rédaction du business plan impossible", error);
@@ -85,8 +85,7 @@ export async function writeBusinessPlan(projectId: string): Promise<FormState> {
       model: DEFAULT_MODEL,
       status: "echec",
       durationMs: Date.now() - started,
-      inputTokens: null,
-      outputTokens: null,
+      usage: usageFromError(error),
     });
     return { ok: false, message: "La rédaction n'a pas abouti. Réessayez dans un instant." };
   }

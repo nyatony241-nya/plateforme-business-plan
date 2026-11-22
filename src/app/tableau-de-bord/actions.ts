@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { usageFromError } from "@/lib/ai/pricing";
 import { analyzeIdea, type IdeaAnalysis } from "@/lib/ai/analyze-idea";
 import { DEFAULT_MODEL } from "@/lib/ai/model";
 import {
@@ -45,8 +46,7 @@ export async function analyzeIdeaAction(_prev: AnalysisState, formData: FormData
       model: DEFAULT_MODEL,
       status: "succes",
       durationMs: result.durationMs,
-      inputTokens: result.usage.inputTokens,
-      outputTokens: result.usage.outputTokens,
+      usage: result.usage,
     });
     return { ok: true, idea, analysis: result.analysis };
   } catch (error) {
@@ -57,8 +57,7 @@ export async function analyzeIdeaAction(_prev: AnalysisState, formData: FormData
       model: DEFAULT_MODEL,
       status: "echec",
       durationMs: Date.now() - started,
-      inputTokens: null,
-      outputTokens: null,
+      usage: usageFromError(error),
     });
     return { ok: false, idea, message: "L'analyse n'a pas abouti. Réessayez dans un instant." };
   }

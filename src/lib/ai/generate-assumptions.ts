@@ -5,6 +5,7 @@ import { computeScenarios, type CountryParams } from "@/engine";
 import { assumptionsSchema, INVESTMENT_KINDS, nextMonth, toPlanInput, type Assumptions } from "@/lib/assumptions";
 import { checkPlanCoherence, COHERENCE } from "@/lib/coherence";
 import { DEFAULT_MODEL, resolveModel } from "@/lib/ai/model";
+import { addUsage, EMPTY_USAGE, usageFrom, usageFromError, type AiUsage } from "@/lib/ai/pricing";
 import type { ParamProvenance } from "@/lib/data/country-params";
 import {
   referenceSnapshot,
@@ -334,7 +335,7 @@ export function relevantReferences(refs: LocalReference[], a: Assumptions, mode:
 
 export type GenerationResult = {
   assumptions: Assumptions;
-  usage: { inputTokens: number | null; outputTokens: number | null };
+  usage: AiUsage;
   durationMs: number;
 };
 
@@ -363,14 +364,16 @@ export async function generateAssumptions(
   const refs = extras.references ?? [];
   const minimumWage = provenance.find((p) => p.code === "revenu_minimum_mensuel")?.value ?? 150_000;
   const started = Date.now();
-  const usage = { inputTokens: 0, outputTokens: 0 };
+  let usage: AiUsage = EMPTY_USAGE;
   let issues: string[] = [];
   let assumptions: Assumptions | null = null;
 
   for (let attempt = 0; attempt < 2; attempt++) {
     // Pas de second essai s'il ne reste pas assez de temps (limite de la fonction : 120 s).
     if (attempt > 0 && Date.now() - started > 50_000) break;
-    const result = await generateText({
+    let result;
+    try {
+      result = await generateText({
       model: resolveModel(model),
       instructions: buildInstructions(minimumWage),
       prompt:
@@ -382,9 +385,14 @@ export async function generateAssumptions(
       output: Output.object({ schema: aiOutputSchema }),
       maxRetries: 1,
       timeout: 50_000,
-    });
-    usage.inputTokens += result.usage?.inputTokens ?? 0;
-    usage.outputTokens += result.usage?.outputTokens ?? 0;
+      });
+    } catch (error) {
+      usage = addUsage(usage, usageFromError(error));
+      // Le second essai a échoué : on garde le premier plan, ses doutes restent signalés.
+      if (assumptions) break;
+      throw Object.assign(error instanceof Error ? error : new Error(String(error)), { usage });
+    }
+    usage = addUsage(usage, usageFrom(result.usage));
 
     assumptions = normalizeAiOutput(
       result.output,

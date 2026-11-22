@@ -1,4 +1,5 @@
 import "server-only";
+import { usageFromError } from "@/lib/ai/pricing";
 import { recommendLegalForm } from "@/lib/creation-guide";
 import { computeScenarios } from "@/engine";
 import { ASSUMPTIONS_MODEL, generateAssumptions } from "@/lib/ai/generate-assumptions";
@@ -62,8 +63,7 @@ export async function generateAndSavePlan(project: Project, context: ProjectCont
       model: ASSUMPTIONS_MODEL,
       status: "succes",
       durationMs: result.durationMs,
-      inputTokens: result.usage.inputTokens,
-      outputTokens: result.usage.outputTokens,
+      usage: result.usage,
     });
     return true;
   } catch (error) {
@@ -74,8 +74,7 @@ export async function generateAndSavePlan(project: Project, context: ProjectCont
       model: ASSUMPTIONS_MODEL,
       status: "echec",
       durationMs: Date.now() - started,
-      inputTokens: null,
-      outputTokens: null,
+      usage: usageFromError(error),
     });
     return false;
   }

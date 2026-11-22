@@ -1,3 +1,4 @@
+import { usageFrom } from "@/lib/ai/pricing";
 import "server-only";
 import { generateText, Output } from "ai";
 import { z } from "zod";
@@ -212,6 +213,6 @@ export async function generatePlanDocument(
   return {
     document,
     durationMs: Date.now() - started,
-    usage: { inputTokens: result.usage?.inputTokens ?? null, outputTokens: result.usage?.outputTokens ?? null },
+    usage: usageFrom(result.usage),
   };
 }

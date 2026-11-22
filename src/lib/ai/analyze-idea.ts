@@ -1,3 +1,4 @@
+import { usageFrom } from "@/lib/ai/pricing";
 import "server-only";
 import { generateText, Output } from "ai";
 import { z } from "zod";
@@ -83,6 +84,6 @@ export async function analyzeIdea(idea: string, cities: { id: string; name: stri
   return {
     analysis: normalizeIdea(result.output, cities),
     durationMs: Date.now() - started,
-    usage: { inputTokens: result.usage?.inputTokens ?? null, outputTokens: result.usage?.outputTokens ?? null },
+    usage: usageFrom(result.usage),
   };
 }
