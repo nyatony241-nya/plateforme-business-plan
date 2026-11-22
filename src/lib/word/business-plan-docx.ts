@@ -21,6 +21,7 @@ import {
 } from "docx";
 import type { PhotoSlot, PlanPhoto } from "@/lib/business-plan";
 import { SECTIONS, buildPlanView, paragraphs, photoSourceName, photoSourceUrl, stars, type PlanViewInput } from "@/lib/business-plan-view";
+import { brand } from "@/config/brand";
 import { reportDownload } from "@/lib/images/photos";
 import { WORD_FONT, getPlanDesign, patternBandColors, type PlanDesign } from "@/lib/plan-designs";
 
@@ -443,7 +444,7 @@ export async function businessPlanDocx(input: PlanViewInput, design: PlanDesign 
   ];
 
   const document = new Document({
-    creator: "Business plan",
+    creator: brand.name,
     title: `Business plan — ${v.title}`,
     styles: { default: { document: { run: { font: t.body, size: 21, color: "23242A" } } } },
     numbering: {
