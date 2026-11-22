@@ -182,7 +182,7 @@ describe("photos fidèles à l'activité", () => {
     const fetchMock = vi.fn<(url: string) => Promise<Response>>(async (url) =>
       Response.json({
         results: url.includes("clothing")
-          ? [shot("scene", "black women shopping in a clothing store")]
+          ? [shot("scene", "african women shopping in a clothing store")]
           : [shot("pieds", "person wearing black white and red socks")],
       }),
     );

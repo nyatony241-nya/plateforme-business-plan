@@ -108,10 +108,15 @@ export function africanize(query: string) {
 const SLOT_HINTS: Record<PhotoSlot, string[]> = {
   couverture: ["shop", "store", "market", "seller", "selling", "vendor", "salon", "stall", "owner", "workshop", "sale", "display"],
   projet: ["display", "shelf", "closeup", "close", "product", "detail", "pile", "stack", "rack", "folded"],
-  marche: ["customer", "client", "shopping", "shopper", "buying", "buyer", "browse", "people", "crowd", "market", "woman", "man"],
-  marketing: ["phone", "smartphone", "social", "online", "laptop", "poster", "advert", "storefront", "card"],
+  marche: ["customer", "client", "shopping", "shopper", "buying", "buyer", "browse", "browsing"],
+  marketing: ["phone", "smartphone", "social", "online", "shopping", "laptop", "poster", "advert", "storefront", "card"],
 };
-const AFRICAN = ["african", "africa", "black", "gabon", "nigeria", "ghana", "kenya", "senegal", "cameroon", "congo", "wax"];
+/** Indices faibles : une scène avec du monde, sans preuve qu'il s'agit de clients. */
+const WEAK_HINTS: Partial<Record<PhotoSlot, string[]>> = {
+  marche: ["people", "crowd", "market", "woman", "man", "family"],
+};
+// « black » seul est trompeur (veste noire, noir et blanc) : on ne le compte pas.
+const AFRICAN = ["african", "africa", "gabon", "nigeria", "ghana", "kenya", "senegal", "cameroon", "congo", "wax"];
 /** Mots trop généraux pour désigner un commerce. */
 const GENERIC = new Set(["store", "shop", "business", "service", "company", "small", "local"]);
 
@@ -127,6 +132,7 @@ const mentions = (text: string, list: string[]) => {
   const w = words(text);
   return list.some((k) => words(k).every((part) => w.some((x) => sameWord(x, part))));
 };
+const countMentions = (text: string, list: string[]) => list.filter((k) => mentions(text, [k])).length;
 
 export type PhotoTerms = {
   /** Ce que l'entreprise vend (sock, socks). */
@@ -141,8 +147,9 @@ export type PhotoTerms = {
 
 /**
  * Pertinence d'une photo pour une section, d'après sa description : ce que l'entreprise vend
- * (10) ou son métier (6), la scène de la section (5), l'Afrique (3), et un bonus (2) pour les
- * premiers résultats d'une recherche précise sur ce commerce en Afrique.
+ * (10) ou son métier (6), la scène de la section (5, ou 7 si plusieurs indices ; 2 pour une
+ * simple foule), l'Afrique (3), et un bonus (2) pour les premiers résultats d'une recherche
+ * précise sur ce commerce en Afrique. 0 = sans rapport avec l'activité.
  */
 export function photoScore(photo: Pick<PlanPhoto, "alt">, slot: PhotoSlot, terms: PhotoTerms, trusted = false) {
   const alt = photo.alt ?? "";
@@ -152,7 +159,10 @@ export function photoScore(photo: Pick<PlanPhoto, "alt">, slot: PhotoSlot, terms
   ];
   const business =
     terms.keywords.length === 0 || mentions(alt, terms.keywords) ? 10 : trade.length > 0 && mentions(alt, trade) ? 6 : 0;
-  return business + (mentions(alt, SLOT_HINTS[slot]) ? 5 : 0) + (mentions(alt, AFRICAN) ? 3 : 0) + (trusted ? 2 : 0);
+  if (business === 0 && !trusted && slot !== "marketing") return 0;
+  const hints = countMentions(alt, SLOT_HINTS[slot]);
+  const scene = hints >= 2 ? 7 : hints === 1 ? 5 : mentions(alt, WEAK_HINTS[slot] ?? []) ? 2 : 0;
+  return business + scene + (mentions(alt, AFRICAN) ? 3 : 0) + (trusted ? 2 : 0);
 }
 
 /** Seuil d'une photo acceptable : le produit pour « projet », sinon l'activité ou une scène fiable. */
@@ -185,7 +195,11 @@ function searchesFor(slot: PhotoSlot, aiQuery: string, terms: PhotoTerms): Searc
             ]
           : [
               {
-                query: terms.online ? "african woman smartphone shopping" : place ? africanize(`${place} storefront`) : "african shop storefront",
+                query: terms.online
+                  ? "african woman smartphone shopping online"
+                  : place
+                    ? africanize(`${place} storefront`)
+                    : "african shop storefront",
                 trusted: true,
               },
               { query: africanize(aiQuery), trusted: false },
