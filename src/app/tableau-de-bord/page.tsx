@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
 import { ConfigNotice } from "@/components/config-notice";
 import { Card } from "@/components/ui";
+import { isAdmin } from "@/lib/data/admin";
 import { listMyProjects, listPilotCities } from "@/lib/data/projects";
 import { formatDateFr } from "@/lib/data-status";
 import { isSupabaseConfigured } from "@/lib/env";
@@ -34,7 +35,7 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <AppHeader name={fullName} />
+      <AppHeader name={fullName} admin={await isAdmin()} />
       <main className="mx-auto grid w-full max-w-6xl flex-1 gap-10 px-5 py-10 sm:px-8 lg:grid-cols-[1fr_1.1fr]">
         <section aria-labelledby="mes-projets">
           <h1 id="mes-projets" className="font-display text-4xl font-semibold tracking-tight text-ink">

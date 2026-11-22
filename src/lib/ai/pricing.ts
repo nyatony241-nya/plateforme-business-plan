@@ -73,3 +73,6 @@ export function aiCostUsd(model: string, usage: AiUsage, at: Date = new Date()):
     ((usage.inputTokens - cached) * rate.input + cached * rate.cachedInput + usage.outputTokens * rate.output) / 1e6;
   return Math.round(cost * 1e6) / 1e6;
 }
+
+/** Dollar en FCFA, pour l'affichage des coûts (BCEAO, novembre 2026 : environ 590 FCFA). */
+export const USD_TO_XAF = 590;
