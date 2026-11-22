@@ -123,3 +123,48 @@ describe("contrôle du loyer", () => {
     expect(checkPlanCoherence(a, results, 2_000_000, { mode: "en_ligne" }).join(" ")).not.toContain("aucun loyer");
   });
 });
+
+describe("frais de création et repères utiles", () => {
+  const refs = pickReferences(ROWS, "Akanda");
+  const withFee = {
+    ...aiOutput(250_000),
+    investments: [
+      { kind: "frais_creation", label: "Frais d'immatriculation", amount: 50_000, lifeYears: 0, rationale: "Estimation." },
+      { kind: "materiel", label: "Fauteuils", amount: 300_000, lifeYears: 5, rationale: "Deux fauteuils." },
+    ],
+  };
+
+  it("remplace l'estimation de l'IA par le tarif officiel de l'ANPI", () => {
+    const a = normalizeAiOutput(withFee, { budget: 3_000_000, mode: "local", city: "Akanda" }, 150_000, meta, refs, {
+      creationFee: 85_000,
+    });
+    const fee = a.investments.filter((i) => i.kind === "frais_creation");
+    expect(fee).toHaveLength(1);
+    expect(fee[0]).toMatchObject({ amount: 85_000, label: "Frais de création à l'ANPI (tarif officiel)" });
+  });
+
+  it("ajoute les frais officiels si l'IA les a oubliés", () => {
+    const a = normalizeAiOutput(aiOutput(250_000), { budget: 3_000_000, mode: "local" }, 150_000, meta, [], {
+      creationFee: 85_000,
+    });
+    expect(a.investments[0]).toMatchObject({ kind: "frais_creation", amount: 85_000 });
+  });
+
+  it("ne cite que les repères qui concernent le plan", () => {
+    const local = normalizeAiOutput(aiOutput(250_000), { budget: 3_000_000, mode: "local", city: "Akanda" }, 150_000, meta, refs);
+    const texts = local.generation?.references?.map((r) => r.text).join(" | ") ?? "";
+    expect(texts).toContain("Loyer");
+    expect(texts).toContain("électricité");
+    // Pas de salarié : le repère des salaires n'est pas cité.
+    expect(texts).not.toContain("Salaire");
+
+    const online = normalizeAiOutput(
+      { ...aiOutput(0), fixedCosts: [{ label: "Forfait internet", monthly: 25_000, rationale: "Box." }] },
+      { budget: 500_000, mode: "en_ligne", city: "Akanda" },
+      150_000,
+      meta,
+      refs,
+    );
+    expect(online.generation?.references ?? []).toHaveLength(0);
+  });
+});

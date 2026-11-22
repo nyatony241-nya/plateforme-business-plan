@@ -4,6 +4,7 @@ import { computeScenarios } from "@/engine";
 import { ASSUMPTIONS_MODEL, generateAssumptions } from "@/lib/ai/generate-assumptions";
 import { toPlanInput } from "@/lib/assumptions";
 import { getCountryParams } from "@/lib/data/country-params";
+import { getCreationSummary } from "@/lib/data/creation";
 import { getLocalReferences } from "@/lib/data/local-references";
 import {
   countMyAiRunsSince,
@@ -29,9 +30,12 @@ export async function planQuotaReached() {
  */
 export async function generateAndSavePlan(project: Project, context: ProjectContextInput): Promise<boolean> {
   await updateProjectContext(project.id, context);
-  const [country, references] = await Promise.all([
+  const [country, references, creation] = await Promise.all([
     getCountryParams(project.country_code, { legalForm: recommendLegalForm(context).form }),
     getLocalReferences(project.country_code, project.city?.name ?? null),
+    getCreationSummary({ country_code: project.country_code, staffing: context.staffing, budget: context.budget }).catch(
+      () => undefined,
+    ),
   ]);
   const started = Date.now();
   try {
@@ -47,7 +51,7 @@ export async function generateAndSavePlan(project: Project, context: ProjectCont
       },
       country.params,
       country.provenance,
-      references,
+      { references, creationFee: creation?.fee ?? null, legalForm: creation?.form },
     );
     // Le moteur doit pouvoir calculer ces hypothèses avant qu'on les enregistre.
     computeScenarios(toPlanInput(result.assumptions, country.params));

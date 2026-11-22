@@ -112,6 +112,18 @@ export default async function BusinessPlanPage({
           </section>
         ) : (
           <>
+            {savedAssumptions && savedDocument && savedAssumptions.updatedAt > savedDocument.updatedAt ? (
+              <section className="mt-4 rounded-2xl border border-gold/40 bg-gold-50 p-5 print:hidden">
+                <p className="font-semibold text-ink">⚠️ Le plan financier a changé depuis la rédaction.</p>
+                <p className="mt-1 text-sm text-ink-soft">
+                  Les tableaux sont à jour, mais le texte décrit peut-être l&apos;ancienne version. Rédigez-le à
+                  nouveau avant de le télécharger.
+                </p>
+                <div className="mt-4">
+                  <WriteButton projectId={id} label="Rédiger à nouveau" />
+                </div>
+              </section>
+            ) : null}
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
               <p className="text-sm text-muted">
                 Pour le PDF, choisissez « Enregistrer en PDF » dans la fenêtre

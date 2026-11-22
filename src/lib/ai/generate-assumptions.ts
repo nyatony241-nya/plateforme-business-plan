@@ -186,6 +186,7 @@ export function normalizeAiOutput(
   minimumWage: number,
   meta: { model: string; generatedAt: string; startMonth: string },
   refs: LocalReference[] = [],
+  official: { creationFee?: number | null } = {},
 ): Assumptions {
   let n = 0;
   const rent = ctx.mode === "local" || ctx.mode === "mixte" ? rentReference(refs) : undefined;
@@ -282,14 +283,53 @@ export function normalizeAiOutput(
           : []),
         ...out.warnings.map((w) => text(w, 400)),
       ].slice(0, 8),
-      ...(refs.length > 0 ? { references: referenceSnapshot(refs, ctx.city ?? null) } : {}),
+      // Rempli plus bas : seulement les repères qui concernent ce plan.
     },
   };
 
   if (assumptions.offers.length === 0) {
     throw new Error("L'IA n'a proposé aucune vente.");
   }
+
+  // Frais de création : le tarif officiel de l'ANPI, jamais une estimation de l'IA.
+  if (official.creationFee != null && official.creationFee > 0) {
+    const fee = {
+      label: "Frais de création à l'ANPI (tarif officiel)",
+      note: "Tarif officiel du portail GNI de l'ANPI-Gabon, pour un entrepreneur de nationalité gabonaise.",
+      kind: "frais_creation" as const,
+      amount: official.creationFee,
+      lifeYears: 0,
+    };
+    const official_ = /cr[ée]ation|immatricul|formalit|anpi|enregistr|guichet/i;
+    const index = assumptions.investments.findIndex((i) => i.kind === "frais_creation" && official_.test(i.label));
+    if (index >= 0) assumptions.investments[index] = { ...assumptions.investments[index], ...fee };
+    else assumptions.investments.unshift({ id: id("inv"), ...fee });
+  }
+
+  const used = relevantReferences(refs, assumptions, ctx.mode ?? null);
+  if (used.length > 0 && assumptions.generation) {
+    assumptions.generation.references = referenceSnapshot(used, ctx.city ?? null);
+  }
   return assumptionsSchema.parse(assumptions);
+}
+
+/** Repères qui concernent vraiment ce plan (pas de loyer cité pour une boutique en ligne sans local). */
+export function relevantReferences(refs: LocalReference[], a: Assumptions, mode: ProjectContext["mode"]) {
+  const costs = a.fixedCosts.map((c) => c.label).join(" | ");
+  return refs.filter((r) => {
+    switch (r.indicator) {
+      case "loyer_local_commercial_mois":
+        return mode === "local" || mode === "mixte" || /loyer/i.test(costs);
+      case "salaire_poste_peu_qualifie_mois":
+        return a.staff.length > 0;
+      case "electricite_prix_kwh":
+        return /[ée]lectricit|courant|seeg|énergie|energie/i.test(costs);
+      case "internet_box_mois":
+        return /internet|connexion|wifi|box|data|forfait/i.test(costs);
+      default:
+        return true;
+    }
+  });
 }
 
 export type GenerationResult = {
@@ -317,9 +357,10 @@ export async function generateAssumptions(
   ctx: ProjectContext,
   params: CountryParams,
   provenance: ParamProvenance[],
-  refs: LocalReference[] = [],
+  extras: { references?: LocalReference[]; creationFee?: number | null; legalForm?: string } = {},
   model: string = ASSUMPTIONS_MODEL,
 ): Promise<GenerationResult> {
+  const refs = extras.references ?? [];
   const minimumWage = provenance.find((p) => p.code === "revenu_minimum_mensuel")?.value ?? 150_000;
   const started = Date.now();
   const usage = { inputTokens: 0, outputTokens: 0 };
@@ -332,7 +373,12 @@ export async function generateAssumptions(
     const result = await generateText({
       model: resolveModel(model),
       instructions: buildInstructions(minimumWage),
-      prompt: buildPrompt(ctx, params, refs, minimumWage) + (attempt > 0 ? buildCorrectionPrompt(issues) : ""),
+      prompt:
+        buildPrompt(ctx, params, refs, minimumWage) +
+        (extras.creationFee
+          ? `\nFrais de création officiels à l'ANPI${extras.legalForm ? ` pour une ${extras.legalForm.toLowerCase()}` : ""} : ${extras.creationFee} FCFA (tarif du portail GNI). Utilise exactement ce montant pour l'investissement « frais de création ».`
+          : "") +
+        (attempt > 0 ? buildCorrectionPrompt(issues) : ""),
       output: Output.object({ schema: aiOutputSchema }),
       maxRetries: 1,
       timeout: 50_000,
@@ -346,6 +392,7 @@ export async function generateAssumptions(
       minimumWage,
       { model, generatedAt: new Date().toISOString(), startMonth: nextMonth() },
       refs,
+      { creationFee: extras.creationFee },
     );
     issues = checkPlanCoherence(assumptions, computeScenarios(toPlanInput(assumptions, params)), ctx.budget, {
       mode: ctx.mode,
