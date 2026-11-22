@@ -4,7 +4,7 @@ import { useId, useState, type ReactNode } from "react";
 import { formatNumber, parseInteger, parsePercent } from "@/lib/format";
 
 const inputClass =
-  "w-full rounded-lg border border-line-strong bg-surface px-3 py-2.5 text-[0.95rem] text-ink tabular-nums focus:border-forest focus:outline-none";
+  "w-full rounded-lg border border-line-strong bg-surface px-3 py-2.5 text-[0.95rem] text-ink tabular-nums focus:border-brand focus:outline-none";
 
 function Labelled({ label, id, children, hint }: { label: string; id: string; children: ReactNode; hint?: string }) {
   return (

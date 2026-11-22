@@ -8,9 +8,10 @@ const base =
   "inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-[0.95rem] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-forest text-white hover:bg-forest-700",
-  secondary: "border border-line-strong bg-surface text-ink hover:border-forest hover:text-forest",
-  ghost: "text-ink-soft hover:text-forest",
+  primary:
+    "bg-linear-to-r from-brand to-brand-2 text-white shadow-[0_8px_20px_-10px_rgba(210,57,12,0.7)] hover:from-brand-700 hover:to-brand",
+  secondary: "border border-line-strong bg-surface text-ink hover:border-brand hover:text-brand",
+  ghost: "text-ink-soft hover:text-brand",
 };
 
 export function buttonClass(variant: Variant = "primary", extra = "") {
@@ -35,14 +36,14 @@ export function ButtonLink({
 
 export function Card({ className = "", children }: { className?: string; children: ReactNode }) {
   return (
-    <div className={`rounded-2xl border border-line bg-surface p-6 sm:p-8 ${className}`}>
+    <div className={`rounded-2xl border border-line bg-surface p-6 shadow-[0_14px_34px_-26px_rgba(35,36,42,0.45)] sm:p-8 ${className}`}>
       {children}
     </div>
   );
 }
 
 const fieldBase =
-  "w-full rounded-xl border bg-surface px-4 py-3 text-base text-ink placeholder:text-muted/70 focus:border-forest focus:outline-none";
+  "w-full rounded-xl border bg-surface px-4 py-3 text-base text-ink placeholder:text-muted/70 focus:border-brand focus:outline-none";
 
 export function Field({
   label,
@@ -96,7 +97,7 @@ export function FormMessage({ ok, children }: { ok: boolean; children: ReactNode
   return (
     <p
       role={ok ? "status" : "alert"}
-      className={`rounded-xl px-4 py-3 text-sm ${ok ? "bg-forest-50 text-forest" : "bg-danger-50 text-danger"}`}
+      className={`rounded-xl px-4 py-3 text-sm ${ok ? "bg-ok-50 text-ok" : "bg-danger-50 text-danger"}`}
     >
       {children}
     </p>
@@ -104,8 +105,8 @@ export function FormMessage({ ok, children }: { ok: boolean; children: ReactNode
 }
 
 const statusStyle: Record<DataStatus, string> = {
-  verifie: "bg-forest-50 text-forest",
-  estimation: "bg-gold-50 text-gold",
+  verifie: "bg-ok-50 text-ok",
+  estimation: "bg-est-50 text-est",
   hypothese: "bg-slate-hyp-50 text-slate-hyp",
 };
 

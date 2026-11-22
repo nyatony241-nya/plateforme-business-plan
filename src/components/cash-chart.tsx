@@ -92,7 +92,7 @@ export function CashChart({ months, series, title }: { months: string[]; series:
       <svg
         ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}
-        className="mt-3 w-full touch-pan-y select-none outline-none focus-visible:ring-2 focus-visible:ring-gold"
+        className="mt-3 w-full touch-pan-y select-none outline-none focus-visible:ring-2 focus-visible:ring-accent"
         role="img"
         aria-label={`${title}. Utilisez les flèches gauche et droite pour lire chaque mois.`}
         tabIndex={0}
@@ -102,8 +102,8 @@ export function CashChart({ months, series, title }: { months: string[]; series:
         onKeyDown={onKey}
         onBlur={() => setActive(null)}
       >
-        {ticks.map((t) => (
-          <g key={t}>
+        {ticks.map((t, i) => (
+          <g key={`${t}-${i}`}>
             <line
               x1={M.left}
               x2={M.left + PLOT_W}

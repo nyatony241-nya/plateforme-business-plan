@@ -42,7 +42,7 @@ function Section({
         <button
           type="button"
           onClick={onAdd}
-          className="mt-4 rounded-lg border border-dashed border-line-strong px-4 py-2.5 text-sm font-semibold text-forest hover:border-forest"
+          className="mt-4 rounded-lg border border-dashed border-line-strong px-4 py-2.5 text-sm font-semibold text-brand hover:border-brand"
         >
           + {addLabel}
         </button>
@@ -204,7 +204,7 @@ export function PlanEditor({
               aussitôt.
             </span>
           </span>
-          <span className="shrink-0 rounded-xl border border-line-strong px-4 py-2 text-sm font-semibold text-forest">
+          <span className="shrink-0 rounded-xl border border-line-strong px-4 py-2 text-sm font-semibold text-brand">
             {editing ? "Masquer" : "Voir et corriger"}
           </span>
         </summary>
@@ -391,7 +391,7 @@ export function PlanEditor({
       </details>
 
         <details className="rounded-2xl border border-line bg-surface px-5 py-4">
-          <summary className="cursor-pointer text-sm font-semibold text-forest">
+          <summary className="cursor-pointer text-sm font-semibold text-brand">
             Impôts et cotisations appliqués (Gabon)
           </summary>
           <p className="mt-2 text-sm text-ink-soft">
@@ -411,7 +411,7 @@ export function PlanEditor({
                   {p.monthlyCeiling ? `Plafond : ${formatXaf(p.monthlyCeiling)} par mois · ` : ""}
                   Source :{" "}
                   {p.source.url ? (
-                    <a href={p.source.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-forest">
+                    <a href={p.source.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-brand">
                       {p.source.publisher ?? p.source.title}
                     </a>
                   ) : (
@@ -428,7 +428,7 @@ export function PlanEditor({
       {computed.ok && editing ? (
         <a
           href="#resultats"
-          className="fixed inset-x-3 bottom-3 z-20 mx-auto flex max-w-3xl items-center justify-between gap-3 rounded-2xl bg-forest px-4 py-3 text-white shadow-lg"
+          className="fixed inset-x-3 bottom-3 z-20 mx-auto flex max-w-3xl items-center justify-between gap-3 rounded-2xl bg-brand px-4 py-3 text-white shadow-lg"
         >
           <span className="text-sm">
             Bénéfice la 1re année

@@ -22,6 +22,7 @@ export type Project = ProjectSummary & {
   budget: number | null;
   mode: "local" | "en_ligne" | "mixte" | null;
   staffing: "seul" | "recruter" | null;
+  plan_design: string;
   country: { name: string } | null;
 };
 
@@ -57,7 +58,7 @@ export async function getMyProject(id: string): Promise<Project | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("projects")
-    .select(`${SUMMARY_COLUMNS}, idea, country_code, budget, mode, staffing, country:countries(name)`)
+    .select(`${SUMMARY_COLUMNS}, idea, country_code, budget, mode, staffing, plan_design, country:countries(name)`)
     .eq("id", id)
     .maybeSingle<Project>();
   if (error) throw new Error(`Lecture du projet impossible : ${error.message}`);

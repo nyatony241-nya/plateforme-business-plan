@@ -33,7 +33,7 @@ export function CompleteRunner({ projectId }: { projectId: string }) {
   }, []);
 
   return (
-    <section className="mt-4 rounded-2xl border border-forest/30 bg-forest-50 p-5 print:hidden" aria-live="polite">
+    <section className="mt-4 rounded-2xl border border-brand/30 bg-brand-50 p-5 print:hidden" aria-live="polite">
       {error ? (
         <>
           <p className="font-semibold text-ink">⚠️ {error}</p>

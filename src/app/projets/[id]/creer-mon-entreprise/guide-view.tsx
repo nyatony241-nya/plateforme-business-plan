@@ -24,7 +24,7 @@ function SourceLine({ source, date }: { source: SourceRef; date?: string }) {
     <p className="text-xs text-muted">
       Source :{" "}
       {source.url ? (
-        <a href={source.url} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-forest">
+        <a href={source.url} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-brand">
           {source.publisher ?? source.title}
         </a>
       ) : (
@@ -69,7 +69,7 @@ export function CreationGuideView({ project, guide, provenance, revenue1 }: Crea
 
   return (
     <>
-        <Link href={`/projets/${id}`} className="text-sm font-semibold text-forest hover:underline">
+        <Link href={`/projets/${id}`} className="text-sm font-semibold text-brand hover:underline">
           ← {project.name}
         </Link>
         <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight text-ink">🏛️ Créer mon entreprise</h1>
@@ -83,8 +83,8 @@ export function CreationGuideView({ project, guide, provenance, revenue1 }: Crea
           </p>
         ) : (
           <>
-            <section className="mt-6 rounded-2xl border border-forest/30 bg-forest-50 p-5 sm:p-6">
-              <p className="text-sm font-semibold uppercase tracking-[0.12em] text-forest">Forme conseillée</p>
+            <section className="mt-6 rounded-2xl border border-brand/30 bg-brand-50 p-5 sm:p-6">
+              <p className="text-sm font-semibold uppercase tracking-[0.12em] text-brand">Forme conseillée</p>
               <p className="mt-2 font-display text-2xl font-semibold text-ink">{LEGAL_FORM_LABEL[main.legalForm]}</p>
               <p className="mt-2 text-ink-soft">{reason}</p>
               {creationFee ? (
@@ -105,7 +105,7 @@ export function CreationGuideView({ project, guide, provenance, revenue1 }: Crea
               <ol className="flex flex-col gap-3">
                 {main.steps.map((s, i) => (
                   <li key={s.titre} className="flex gap-3">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-forest text-sm font-bold text-white">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-bold text-white">
                       {i + 1}
                     </span>
                     <span>
@@ -235,7 +235,7 @@ export function CreationGuideView({ project, guide, provenance, revenue1 }: Crea
                 {phones.map((p) => (
                   <p key={p}>
                     📞{" "}
-                    <a href={`tel:${p.replace(/\s/g, "")}`} className="font-semibold text-forest underline-offset-2 hover:underline">
+                    <a href={`tel:${p.replace(/\s/g, "")}`} className="font-semibold text-brand underline-offset-2 hover:underline">
                       {p}
                     </a>{" "}
                     ·{" "}
@@ -243,7 +243,7 @@ export function CreationGuideView({ project, guide, provenance, revenue1 }: Crea
                       href={`https://wa.me/${p.replace(/\D/g, "")}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-forest underline-offset-2 hover:underline"
+                      className="text-brand underline-offset-2 hover:underline"
                     >
                       WhatsApp
                     </a>
@@ -252,7 +252,7 @@ export function CreationGuideView({ project, guide, provenance, revenue1 }: Crea
                 {email ? (
                   <p>
                     ✉️{" "}
-                    <a href={`mailto:${email}`} className="text-forest underline-offset-2 hover:underline">
+                    <a href={`mailto:${email}`} className="text-brand underline-offset-2 hover:underline">
                       {email}
                     </a>
                   </p>
@@ -260,7 +260,7 @@ export function CreationGuideView({ project, guide, provenance, revenue1 }: Crea
                 {inst.website ? (
                   <p>
                     🌐{" "}
-                    <a href={inst.website} target="_blank" rel="noreferrer" className="text-forest underline-offset-2 hover:underline">
+                    <a href={inst.website} target="_blank" rel="noreferrer" className="text-brand underline-offset-2 hover:underline">
                       {inst.website.replace(/^https?:\/\//, "")}
                     </a>
                   </p>
@@ -275,7 +275,7 @@ export function CreationGuideView({ project, guide, provenance, revenue1 }: Crea
 
             {other ? (
               <details className="mt-8 rounded-2xl border border-line bg-surface px-5 py-4">
-                <summary className="cursor-pointer font-semibold text-forest">
+                <summary className="cursor-pointer font-semibold text-brand">
                   Comparer avec : {LEGAL_FORM_LABEL[other.legalForm]}
                 </summary>
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">

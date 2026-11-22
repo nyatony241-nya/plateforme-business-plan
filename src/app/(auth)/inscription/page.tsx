@@ -17,7 +17,7 @@ export default function SignUpPage() {
       <SignUpForm disabled={!isSupabaseConfigured} />
       <p className="text-sm text-ink-soft">
         Déjà inscrit ?{" "}
-        <Link href="/connexion" className="font-semibold text-forest underline-offset-4 hover:underline">
+        <Link href="/connexion" className="font-semibold text-brand underline-offset-4 hover:underline">
           Se connecter
         </Link>
       </p>

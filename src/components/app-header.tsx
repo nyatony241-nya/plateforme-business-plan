@@ -10,16 +10,16 @@ export function AppHeader({ name, admin = false }: { name?: string | null; admin
         {name ? (
           <div className="flex items-center gap-3">
             {admin ? (
-              <Link href="/admin" className="rounded-lg px-3 py-2 text-sm font-semibold text-ink-soft hover:text-forest">
+              <Link href="/admin" className="rounded-lg px-3 py-2 text-sm font-semibold text-ink-soft hover:text-brand">
                 🛠️ Admin
               </Link>
             ) : null}
-            <Link href="/credits" className="rounded-lg px-3 py-2 text-sm font-semibold text-ink-soft hover:text-forest">
+            <Link href="/credits" className="rounded-lg px-3 py-2 text-sm font-semibold text-ink-soft hover:text-brand">
               🪙 Crédits
             </Link>
             <span className="hidden text-sm text-ink-soft sm:inline">{name}</span>
             <form action="/deconnexion" method="post">
-              <button type="submit" className="rounded-lg px-3 py-2 text-sm font-semibold text-ink-soft hover:text-forest">
+              <button type="submit" className="rounded-lg px-3 py-2 text-sm font-semibold text-ink-soft hover:text-brand">
                 Déconnexion
               </button>
             </form>

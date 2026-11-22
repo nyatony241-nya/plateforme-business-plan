@@ -42,7 +42,7 @@ export default async function ProjectPage({ params }: PageProps<"/projets/[id]">
     <>
       <AppHeader name={(user.user_metadata?.full_name as string | undefined) ?? user.email} />
       <main className="mx-auto w-full max-w-4xl flex-1 px-5 py-10 sm:px-8">
-        <Link href="/tableau-de-bord" className="text-sm font-semibold text-forest hover:underline">
+        <Link href="/tableau-de-bord" className="text-sm font-semibold text-brand hover:underline">
           ← Mes projets
         </Link>
         <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
@@ -63,7 +63,7 @@ export default async function ProjectPage({ params }: PageProps<"/projets/[id]">
         {saved ? (
           <Link
             href={`/projets/${project.id}/plan-financier`}
-            className="mt-8 flex flex-col gap-4 rounded-2xl border border-forest/30 bg-forest-50 p-6 transition-colors hover:border-forest sm:flex-row sm:items-center sm:justify-between"
+            className="mt-8 flex flex-col gap-4 rounded-2xl border border-brand/30 bg-brand-50 p-6 transition-colors hover:border-brand sm:flex-row sm:items-center sm:justify-between"
           >
             <span>
               <span className="block font-display text-2xl font-semibold text-ink">Plan financier</span>
@@ -71,7 +71,7 @@ export default async function ProjectPage({ params }: PageProps<"/projets/[id]">
                 Prêt : trois scénarios calculés, avec l&apos;explication de chaque chiffre.
               </span>
             </span>
-            <span className="inline-flex shrink-0 items-center justify-center rounded-xl bg-forest px-5 py-3 text-[0.95rem] font-semibold text-white">
+            <span className="inline-flex shrink-0 items-center justify-center rounded-xl bg-brand px-5 py-3 text-[0.95rem] font-semibold text-white">
               Ouvrir
             </span>
           </Link>
@@ -79,7 +79,7 @@ export default async function ProjectPage({ params }: PageProps<"/projets/[id]">
         {saved ? (
           <Link
             href={`/projets/${project.id}/business-plan`}
-            className="mt-4 flex flex-col gap-4 rounded-2xl border border-line bg-surface p-6 transition-colors hover:border-forest sm:flex-row sm:items-center sm:justify-between"
+            className="mt-4 flex flex-col gap-4 rounded-2xl border border-line bg-surface p-6 transition-colors hover:border-brand sm:flex-row sm:items-center sm:justify-between"
           >
             <span>
               <span className="block font-display text-2xl font-semibold text-ink">Business plan</span>
@@ -87,12 +87,12 @@ export default async function ProjectPage({ params }: PageProps<"/projets/[id]">
                 Le document complet, rédigé à partir du plan financier, à télécharger en PDF.
               </span>
             </span>
-            <span className="inline-flex shrink-0 items-center justify-center rounded-xl border border-line-strong px-5 py-3 text-[0.95rem] font-semibold text-forest">
+            <span className="inline-flex shrink-0 items-center justify-center rounded-xl border border-line-strong px-5 py-3 text-[0.95rem] font-semibold text-brand">
               Ouvrir
             </span>
           </Link>
         ) : (
-          <section aria-labelledby="generer" className="mt-8 rounded-2xl border border-forest/30 bg-forest-50 p-6">
+          <section aria-labelledby="generer" className="mt-8 rounded-2xl border border-brand/30 bg-brand-50 p-6">
             <h2 id="generer" className="font-display text-2xl font-semibold text-ink">
               Votre plan financier en une minute
             </h2>
@@ -111,7 +111,7 @@ export default async function ProjectPage({ params }: PageProps<"/projets/[id]">
 
         <Link
           href={`/projets/${project.id}/creer-mon-entreprise`}
-          className="mt-4 flex flex-col gap-4 rounded-2xl border border-line bg-surface p-6 transition-colors hover:border-forest sm:flex-row sm:items-center sm:justify-between"
+          className="mt-4 flex flex-col gap-4 rounded-2xl border border-line bg-surface p-6 transition-colors hover:border-brand sm:flex-row sm:items-center sm:justify-between"
         >
           <span>
             <span className="block font-display text-2xl font-semibold text-ink">🏛️ Créer mon entreprise</span>
@@ -119,7 +119,7 @@ export default async function ProjectPage({ params }: PageProps<"/projets/[id]">
               Forme juridique conseillée, étapes à l&apos;ANPI, pièces, frais et contacts officiels.
             </span>
           </span>
-          <span className="inline-flex shrink-0 items-center justify-center rounded-xl border border-line-strong px-5 py-3 text-[0.95rem] font-semibold text-forest">
+          <span className="inline-flex shrink-0 items-center justify-center rounded-xl border border-line-strong px-5 py-3 text-[0.95rem] font-semibold text-brand">
             Ouvrir
           </span>
         </Link>

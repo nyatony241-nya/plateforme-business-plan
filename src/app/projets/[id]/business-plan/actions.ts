@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { computeScenarios } from "@/engine";
 import type { ProjectContext } from "@/lib/ai/generate-assumptions";
@@ -21,7 +22,8 @@ import {
   type Project,
 } from "@/lib/data/projects";
 import { findPlanPhotos, reportDownload } from "@/lib/images/photos";
-import { getCurrentUser } from "@/lib/supabase/server";
+import { isPlanDesignId } from "@/lib/plan-designs";
+import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import type { FormState } from "@/lib/validation";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -151,4 +153,13 @@ export async function unlockPlanAction(projectId: string): Promise<void> {
   if (!user) redirect(`/connexion?suite=/projets/${projectId}/business-plan`);
   const ok = await unlockPlan(projectId);
   redirect(ok ? `/projets/${projectId}/business-plan` : `/credits?projet=${projectId}`);
+}
+
+/** Enregistre le design choisi pour le business plan (aucun appel à l'IA). */
+export async function setPlanDesign(projectId: string, formData: FormData): Promise<void> {
+  const design = String(formData.get("design") ?? "");
+  if (!isPlanDesignId(design)) return;
+  const supabase = await createClient();
+  await supabase.from("projects").update({ plan_design: design }).eq("id", projectId);
+  revalidatePath(`/projets/${projectId}/business-plan`);
 }

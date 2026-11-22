@@ -55,16 +55,16 @@ export default async function FinancialPlanPage({ params }: PageProps<"/projets/
     <>
       <AppHeader name={(user.user_metadata?.full_name as string | undefined) ?? user.email} />
       <main className="mx-auto w-full max-w-7xl flex-1 px-5 pb-28 pt-8 sm:px-8">
-        <Link href={`/projets/${id}`} className="text-sm font-semibold text-forest hover:underline">
+        <Link href={`/projets/${id}`} className="text-sm font-semibold text-brand hover:underline">
           ← {project.name}
         </Link>
         <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight text-ink">Plan financier</h1>
         {initial && saved ? (
           <details className="mt-4 max-w-4xl">
-            <summary className="inline-flex cursor-pointer list-none items-center gap-2 rounded-xl bg-forest px-5 py-3 text-[0.95rem] font-semibold text-white [&::-webkit-details-marker]:hidden">
+            <summary className="inline-flex cursor-pointer list-none items-center gap-2 rounded-xl bg-brand px-5 py-3 text-[0.95rem] font-semibold text-white [&::-webkit-details-marker]:hidden">
               <span aria-hidden>🔄</span> Regénérer le plan
             </summary>
-            <div className="mt-4 rounded-2xl border border-forest/30 bg-forest-50 p-5">
+            <div className="mt-4 rounded-2xl border border-brand/30 bg-brand-50 p-5">
               <p className="text-sm text-ink-soft">
                 Tous les chiffres sont recalculés avec les dernières règles et les repères locaux. Vos corrections
                 actuelles seront remplacées.
@@ -77,7 +77,7 @@ export default async function FinancialPlanPage({ params }: PageProps<"/projets/
         ) : null}
 
         {!initial || !saved ? (
-          <section className="mt-6 max-w-4xl rounded-2xl border border-forest/30 bg-forest-50 p-6">
+          <section className="mt-6 max-w-4xl rounded-2xl border border-brand/30 bg-brand-50 p-6">
             <h2 className="font-display text-2xl font-semibold text-ink">Générer le plan</h2>
             <p className="mt-1 text-ink-soft">
               Trois réponses, et la plateforme construit tout : investissements, prix, ventes, charges, personnel,
@@ -102,7 +102,7 @@ export default async function FinancialPlanPage({ params }: PageProps<"/projets/
                     <ul className="mt-2 flex flex-col gap-1.5 text-sm leading-relaxed text-ink-soft">
                       {generation.warnings.map((w) => (
                         <li key={w} className="flex gap-2">
-                          <span aria-hidden className="text-gold">•</span>
+                          <span aria-hidden className="text-accent">•</span>
                           {w}
                         </li>
                       ))}

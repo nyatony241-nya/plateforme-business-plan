@@ -51,13 +51,13 @@ export default async function DashboardPage() {
                 <li key={project.id}>
                   <Link
                     href={`/projets/${project.id}`}
-                    className="block rounded-2xl border border-line bg-surface p-5 transition-colors hover:border-forest"
+                    className="block rounded-2xl border border-line bg-surface p-5 transition-colors hover:border-brand"
                   >
                     <p className="text-lg font-bold text-ink">{project.name}</p>
                     <p className="mt-1 text-sm text-muted">
                       {[project.city?.name, project.district, project.sector].filter(Boolean).join(" · ")}
                     </p>
-                    <p className="mt-3 text-xs font-semibold uppercase tracking-[0.12em] text-gold">
+                    <p className="mt-3 text-xs font-semibold uppercase tracking-[0.12em] text-accent">
                       Brouillon · modifié le {formatDateFr(project.updated_at)}
                     </p>
                   </Link>

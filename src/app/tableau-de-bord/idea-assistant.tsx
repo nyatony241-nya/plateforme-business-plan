@@ -43,7 +43,7 @@ export function IdeaAssistant({
       >
         {analysis.message ? <FormMessage ok={false}>{analysis.message}</FormMessage> : null}
         {a?.clarification && !editing ? (
-          <div className="rounded-xl border border-gold/40 bg-gold-50 p-4">
+          <div className="rounded-xl border border-accent/40 bg-accent-50 p-4">
             <p className="font-semibold text-ink">❓ {a.clarification}</p>
             <p className="mt-1 text-sm text-ink-soft">Ajoutez cette précision à votre texte, puis continuez.</p>
           </div>
@@ -66,7 +66,7 @@ export function IdeaAssistant({
             <button
               type="button"
               onClick={() => setForced(true)}
-              className="text-sm font-semibold text-forest underline-offset-2 hover:underline sm:self-center"
+              className="text-sm font-semibold text-brand underline-offset-2 hover:underline sm:self-center"
             >
               Continuer sans préciser
             </button>
@@ -166,13 +166,13 @@ export function IdeaAssistant({
       {created.message ? <FormMessage ok={false}>{created.message}</FormMessage> : null}
       <input type="hidden" name="idea" value={analysis.idea} />
 
-      <div className="rounded-xl border border-forest/20 bg-forest-50 p-4">
-        <p className="text-sm font-semibold text-forest">Voici ce que j&apos;ai compris</p>
+      <div className="rounded-xl border border-brand/20 bg-brand-50 p-4">
+        <p className="text-sm font-semibold text-brand">Voici ce que j&apos;ai compris</p>
         <p className="mt-1 text-ink">{a!.summary}</p>
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="mt-2 text-sm font-semibold text-forest underline-offset-2 hover:underline"
+          className="mt-2 text-sm font-semibold text-brand underline-offset-2 hover:underline"
         >
           Modifier mon idée
         </button>
@@ -186,7 +186,7 @@ export function IdeaAssistant({
       ) : null}
 
       <details className="rounded-xl border border-line bg-surface px-4 py-3" open={Object.keys(e).length > 0}>
-        <summary className="cursor-pointer text-sm font-semibold text-forest">Vérifier ou modifier les autres informations</summary>
+        <summary className="cursor-pointer text-sm font-semibold text-brand">Vérifier ou modifier les autres informations</summary>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">{known.map((f) => f.field)}</div>
       </details>
 

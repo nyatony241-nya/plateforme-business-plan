@@ -87,7 +87,7 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-5 py-10 sm:px-8">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.14em] text-gold">🛠️ Espace admin</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.14em] text-accent">🛠️ Espace admin</p>
             <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight text-ink">Pilotage</h1>
           </div>
           <nav className="flex gap-2 text-sm">
@@ -95,7 +95,7 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
               <Link
                 key={p}
                 href={`/admin?periode=${p}`}
-                className={`rounded-lg px-3 py-2 font-semibold ${p === period ? "bg-forest text-white" : "text-ink-soft hover:text-forest"}`}
+                className={`rounded-lg px-3 py-2 font-semibold ${p === period ? "bg-brand text-white" : "text-ink-soft hover:text-brand"}`}
               >
                 {p === "tout" ? "Depuis le début" : `${p} jours`}
               </Link>
@@ -198,7 +198,7 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
                   </span>
                   <span className="shrink-0 text-xs">
                     {STATUS[d.status] ?? d.status} ·{" "}
-                    <span className={late ? "font-semibold text-danger" : near ? "font-semibold text-gold" : "text-muted"}>
+                    <span className={late ? "font-semibold text-danger" : near ? "font-semibold text-accent" : "text-muted"}>
                       {d.expiresAt ? `${late ? "à revérifier depuis le" : "à revérifier le"} ${day(d.expiresAt)}` : "sans échéance"}
                     </span>
                   </span>

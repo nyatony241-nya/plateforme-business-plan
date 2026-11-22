@@ -25,7 +25,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/connexion
       <SignInForm disabled={!isSupabaseConfigured} next={next} />
       <p className="text-sm text-ink-soft">
         Pas encore de compte ?{" "}
-        <Link href="/inscription" className="font-semibold text-forest underline-offset-4 hover:underline">
+        <Link href="/inscription" className="font-semibold text-brand underline-offset-4 hover:underline">
           Créer un compte
         </Link>
       </p>

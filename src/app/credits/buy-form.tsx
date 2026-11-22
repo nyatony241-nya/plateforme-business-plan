@@ -56,7 +56,7 @@ export function BuyForm({
           const perPlan = Math.round(p.price_xaf / p.credits);
           return (
             <div key={p.code} className="flex flex-col rounded-2xl border border-line bg-surface p-5">
-              <p className="text-sm font-semibold uppercase tracking-[0.12em] text-gold">{p.name}</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.12em] text-accent">{p.name}</p>
               <p className="mt-2 font-display text-3xl font-semibold text-ink">{formatXaf(p.price_xaf)}</p>
               <p className="mt-1 text-sm text-ink-soft">
                 {p.credits} business plan{p.credits > 1 ? "s" : ""} complet{p.credits > 1 ? "s" : ""}

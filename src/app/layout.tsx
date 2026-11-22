@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from "next";
+import "@fontsource-variable/exo-2";
 import "@fontsource-variable/fraunces";
 import "@fontsource-variable/manrope";
+import "@fontsource-variable/montserrat";
+import "@fontsource-variable/playfair-display";
 import "./globals.css";
 import { brand } from "@/config/brand";
 
@@ -14,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0f4d3a",
+  themeColor: "#d2390c",
   width: "device-width",
   initialScale: 1,
 };

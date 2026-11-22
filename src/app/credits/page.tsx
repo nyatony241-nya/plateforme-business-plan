@@ -53,7 +53,7 @@ export default async function CreditsPage({ searchParams }: PageProps<"/credits"
       <AppHeader name={fullName || user.email} />
       <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-8 px-5 py-10 sm:px-8">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.14em] text-gold">🪙 Crédits</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.14em] text-accent">🪙 Crédits</p>
           <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight text-ink">
             {balance} crédit{balance > 1 ? "s" : ""}
           </h1>
@@ -64,11 +64,11 @@ export default async function CreditsPage({ searchParams }: PageProps<"/credits"
         </div>
 
         {project ? (
-          <div className="rounded-2xl border border-forest/30 bg-forest-50 p-5 text-sm text-ink">
+          <div className="rounded-2xl border border-brand/30 bg-brand-50 p-5 text-sm text-ink">
             {balance > 0 ? (
               <>
                 Vous avez déjà {balance} crédit{balance > 1 ? "s" : ""}.{" "}
-                <Link href={`/projets/${project.id}/business-plan`} className="font-semibold text-forest underline">
+                <Link href={`/projets/${project.id}/business-plan`} className="font-semibold text-brand underline">
                   Débloquer « {project.name} »
                 </Link>
               </>
@@ -98,7 +98,7 @@ export default async function CreditsPage({ searchParams }: PageProps<"/credits"
                       {new Date(e.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
                     </span>
                   </span>
-                  <span className={`font-semibold tabular-nums ${e.delta > 0 ? "text-forest" : "text-ink-soft"}`}>
+                  <span className={`font-semibold tabular-nums ${e.delta > 0 ? "text-brand" : "text-ink-soft"}`}>
                     {e.delta > 0 ? `+${e.delta}` : e.delta}
                   </span>
                 </li>

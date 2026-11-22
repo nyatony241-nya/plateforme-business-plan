@@ -21,7 +21,9 @@ import {
 } from "@/lib/data/projects";
 import { isSupabaseConfigured } from "@/lib/env";
 import { getCurrentUser } from "@/lib/supabase/server";
+import { getPlanDesign } from "@/lib/plan-designs";
 import { CompleteRunner } from "./complete-runner";
+import { DesignPicker } from "./design-picker";
 import { PlanDocumentView } from "./document";
 import { unlockPlanAction } from "./actions";
 import { PrintButton } from "./print-button";
@@ -91,14 +93,14 @@ export default async function BusinessPlanPage({
         <div className="print:hidden">
           <Link
             href={`/projets/${id}`}
-            className="text-sm font-semibold text-forest hover:underline"
+            className="text-sm font-semibold text-brand hover:underline"
           >
             ← {project.name}
           </Link>
         </div>
 
         {!assumptions?.success ? (
-          <section className="mt-6 rounded-2xl border border-forest/30 bg-forest-50 p-6">
+          <section className="mt-6 rounded-2xl border border-brand/30 bg-brand-50 p-6">
             <h1 className="font-display text-2xl font-semibold text-ink">
               Business plan
             </h1>
@@ -111,7 +113,7 @@ export default async function BusinessPlanPage({
             </ButtonLink>
           </section>
         ) : !doc?.success ? (
-          <section className="mt-6 rounded-2xl border border-forest/30 bg-forest-50 p-6">
+          <section className="mt-6 rounded-2xl border border-brand/30 bg-brand-50 p-6">
             <h1 className="font-display text-2xl font-semibold text-ink">
               Votre business plan en une minute
             </h1>
@@ -128,7 +130,7 @@ export default async function BusinessPlanPage({
         ) : (
           <>
             {savedAssumptions && savedDocument && savedAssumptions.updatedAt > savedDocument.updatedAt ? (
-              <section className="mt-4 rounded-2xl border border-gold/40 bg-gold-50 p-5 print:hidden">
+              <section className="mt-4 rounded-2xl border border-accent/40 bg-accent-50 p-5 print:hidden">
                 <p className="font-semibold text-ink">⚠️ Le plan financier a changé depuis la rédaction.</p>
                 <p className="mt-1 text-sm text-ink-soft">
                   Les tableaux sont à jour, mais le texte décrit peut-être l&apos;ancienne version. Rédigez-le à
@@ -160,6 +162,7 @@ export default async function BusinessPlanPage({
             ) : pending ? null : (
               <UnlockPanel projectId={id} balance={balance} fromPrice={fromPrice} />
             )}
+            <DesignPicker projectId={id} current={project.plan_design} />
             {/* Cadre d'impression : marges sur chaque page, sans l'adresse ni la date du navigateur. */}
             <table className="print-frame mt-6 print:mt-0">
               <thead aria-hidden>
@@ -183,6 +186,7 @@ export default async function BusinessPlanPage({
                       doc={full ? doc.data : previewDocument(doc.data)}
                       preview={!full}
                       pending={pending}
+                      design={getPlanDesign(project.plan_design)}
                       a={assumptions.data}
                       results={computeScenarios(
                         toPlanInput(assumptions.data, country.params),
@@ -207,7 +211,7 @@ export default async function BusinessPlanPage({
               </div>
             )}
             <details className="mt-6 rounded-2xl border border-line bg-surface px-5 py-4 print:hidden">
-              <summary className="cursor-pointer text-sm font-semibold text-forest">
+              <summary className="cursor-pointer text-sm font-semibold text-brand">
                 Rédiger à nouveau
               </summary>
               <p className="mt-2 text-sm text-ink-soft">
@@ -236,7 +240,7 @@ function UnlockPanel({
   fromPrice: number | null;
 }) {
   return (
-    <section className="mt-4 rounded-2xl border border-forest/30 bg-forest-50 p-5 print:hidden">
+    <section className="mt-4 rounded-2xl border border-brand/30 bg-brand-50 p-5 print:hidden">
       <p className="font-semibold text-ink">
         🔒 Aperçu gratuit : {PREVIEW_SECTIONS} parties sur {SECTIONS.length}
       </p>

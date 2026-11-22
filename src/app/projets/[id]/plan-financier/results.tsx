@@ -63,10 +63,10 @@ const LINES: {
 ];
 
 const BREAKDOWN_COLOR: Record<BreakdownPart["key"], string> = {
-  achats: "#a8771f",
-  charges: "#5f6f82",
-  impots: "#aab3bf",
-  benefice: "#0f4d3a",
+  achats: "#f2a066",
+  charges: "#5d5f68",
+  impots: "#b9bac3",
+  benefice: "#d2390c",
 };
 
 /** Où vont les ventes de la 1re année : une barre sur 100 FCFA, chaque part nommée. */
@@ -109,7 +109,7 @@ function OwnerIncome({ r, minimumWage }: { r: PlanResult; minimumWage: number })
   const alert = first.loss || first.belowMinimum;
   return (
     <p
-      className={`rounded-xl border px-4 py-3 text-sm ${alert ? "border-danger/40 bg-danger-50 text-danger" : "border-forest/30 bg-forest-50 text-forest"}`}
+      className={`rounded-xl border px-4 py-3 text-sm ${alert ? "border-danger/40 bg-danger-50 text-danger" : "border-brand/30 bg-brand-50 text-brand"}`}
     >
       <strong>Votre paie :</strong>{" "}
       {first.loss
@@ -207,11 +207,11 @@ export function Results({
               Tableaux sur 3 ans, trois scénarios et trésorerie mois par mois, avec le business plan complet.
             </span>
           </span>
-          <span className="shrink-0 font-semibold text-forest">Débloquer</span>
+          <span className="shrink-0 font-semibold text-brand">Débloquer</span>
         </a>
       ) : (
         <details className="rounded-2xl border border-line bg-surface">
-          <summary className="cursor-pointer px-5 py-4 text-sm font-semibold text-forest">Voir tous les chiffres</summary>
+          <summary className="cursor-pointer px-5 py-4 text-sm font-semibold text-brand">Voir tous les chiffres</summary>
           <div className="flex flex-col gap-4 border-t border-line p-4 sm:p-5">
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <Kpi

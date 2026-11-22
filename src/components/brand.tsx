@@ -11,10 +11,16 @@ export function BrandMark({ size = 28 }: { size?: number }) {
       aria-hidden="true"
       className="shrink-0"
     >
-      <rect width="32" height="32" rx="8" fill="var(--color-forest)" />
-      <rect x="8" y="17" width="4" height="7" rx="1" fill="var(--color-gold-50)" />
-      <rect x="14" y="13" width="4" height="11" rx="1" fill="var(--color-gold-50)" />
-      <rect x="20" y="8" width="4" height="16" rx="1" fill="#d9a441" />
+      <defs>
+        <linearGradient id="marque-degrade" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#ff7a1f" />
+          <stop offset="1" stopColor="#d2390c" />
+        </linearGradient>
+      </defs>
+      <rect width="32" height="32" rx="8" fill="url(#marque-degrade)" />
+      <rect x="8" y="17" width="4" height="7" rx="1" fill="#ffffff" fillOpacity="0.85" />
+      <rect x="14" y="13" width="4" height="11" rx="1" fill="#ffffff" fillOpacity="0.92" />
+      <rect x="20" y="8" width="4" height="16" rx="1" fill="#ffffff" />
     </svg>
   );
 }

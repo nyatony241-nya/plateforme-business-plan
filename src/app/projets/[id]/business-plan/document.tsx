@@ -1,26 +1,83 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { CashChart } from "@/components/cash-chart";
 import { SCENARIO_LABEL } from "@/engine";
 import type { PlanPhoto } from "@/lib/business-plan";
 import { SECTIONS, buildPlanView, paragraphs, photoSourceName, photoSourceUrl, stars, type PlanViewInput } from "@/lib/business-plan-view";
+import { FONT_STACK, getPlanDesign, patternCss, type PlanDesign, type PlanHeading } from "@/lib/plan-designs";
 import { LOCKED_CONTENTS, PREVIEW_SECTIONS } from "@/lib/plan-preview";
 import { SCENARIO_COLOR, SCENARIO_ORDER } from "@/lib/scenario-colors";
 
-function Section({ n, children }: { n: number; children: ReactNode }) {
+/** Titre de partie, selon le style du design : numéro, pastille ou bande. */
+function SectionHeading({ n, heading }: { n: number; heading: PlanHeading }) {
   const { emoji, title } = SECTIONS[n - 1];
-  return (
-    <section className="mt-12 print:mt-8">
-      <h2 className="flex items-center gap-3 break-after-avoid border-b border-line pb-2 font-display text-2xl font-semibold text-ink">
-        <span aria-hidden className="text-2xl">
-          {emoji}
+  const display = "font-(family-name:--plan-display) text-2xl font-semibold text-(--plan-ink)";
+  if (heading === "pastille") {
+    return (
+      <h2 className={`flex items-center gap-3 break-after-avoid border-b-2 border-(--plan-primary)/25 pb-2.5 ${display}`}>
+        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-(--plan-primary) text-lg font-bold text-white">
+          {n}
         </span>
         <span>
-          <span className="mr-2 text-gold">{n}.</span>
+          <span aria-hidden className="mr-2">
+            {emoji}
+          </span>
           {title}
         </span>
       </h2>
+    );
+  }
+  if (heading === "bande") {
+    return (
+      <h2 className={`flex items-center gap-3 break-after-avoid rounded-lg border-l-4 border-(--plan-primary) bg-(--plan-soft) px-4 py-2.5 ${display}`}>
+        <span aria-hidden>{emoji}</span>
+        <span>
+          <span className="mr-2 text-(--plan-primary)">{n}.</span>
+          {title}
+        </span>
+      </h2>
+    );
+  }
+  return (
+    <h2 className={`flex items-center gap-3 break-after-avoid border-b border-line pb-2 ${display}`}>
+      <span aria-hidden className="text-2xl">
+        {emoji}
+      </span>
+      <span>
+        <span className="mr-2 text-(--plan-accent)">{n}.</span>
+        {title}
+      </span>
+    </h2>
+  );
+}
+
+function Section({ n, heading, children }: { n: number; heading: PlanHeading; children: ReactNode }) {
+  return (
+    <section className="mt-12 print:mt-8">
+      <SectionHeading n={n} heading={heading} />
       <div className="mt-4 flex flex-col gap-4 leading-relaxed text-ink">{children}</div>
     </section>
+  );
+}
+
+/** Bande de motif africain (kente, bogolan, adire, wax), si le design en a un. */
+function PatternBand({ design, className = "" }: { design: PlanDesign; className?: string }) {
+  const image = patternCss(design.pattern);
+  if (!image) return null;
+  return <div aria-hidden className={`h-3.5 rounded-full ${className}`} style={{ backgroundImage: image, backgroundRepeat: "repeat-x" }} />;
+}
+
+function PhotoCredit({ photo, light = false }: { photo: PlanPhoto; light?: boolean }) {
+  return (
+    <span className={light ? "text-white/80" : "text-muted"}>
+      📷 Photo de{" "}
+      <a href={photo.photographerUrl} className="underline underline-offset-2">
+        {photo.photographer}
+      </a>{" "}
+      sur{" "}
+      <a href={photoSourceUrl(photo)} className="underline underline-offset-2">
+        {photoSourceName(photo)}
+      </a>
+    </span>
   );
 }
 
@@ -67,15 +124,8 @@ function Photo({ photo, tall = false }: { photo?: PlanPhoto; tall?: boolean }) {
         loading="eager"
         className={`w-full rounded-xl object-cover ${tall ? "aspect-[16/8] print:aspect-[16/7]" : "aspect-[16/6] print:aspect-[3/1]"}`}
       />
-      <figcaption className="mt-1.5 text-xs text-muted">
-        📷 Photo de{" "}
-        <a href={photo.photographerUrl} className="underline underline-offset-2">
-          {photo.photographer}
-        </a>{" "}
-        sur{" "}
-        <a href={photoSourceUrl(photo)} className="underline underline-offset-2">
-          {photoSourceName(photo)}
-        </a>
+      <figcaption className="mt-1.5 text-xs">
+        <PhotoCredit photo={photo} />
       </figcaption>
     </figure>
   );
@@ -83,7 +133,7 @@ function Photo({ photo, tall = false }: { photo?: PlanPhoto; tall?: boolean }) {
 
 /** Filigrane de l'aperçu, à l'écran comme à l'impression : la copie n'est pas utilisable. */
 const WATERMARK = `url("data:image/svg+xml,${encodeURIComponent(
-  '<svg xmlns="http://www.w3.org/2000/svg" width="420" height="260"><text x="210" y="140" text-anchor="middle" transform="rotate(-28 210 130)" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="rgba(168,119,31,0.22)">APERÇU · NON VALABLE</text></svg>',
+  '<svg xmlns="http://www.w3.org/2000/svg" width="420" height="260"><text x="210" y="140" text-anchor="middle" transform="rotate(-28 210 130)" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="rgba(90,90,100,0.22)">APERÇU · NON VALABLE</text></svg>',
 )}")`;
 
 function Watermark() {
@@ -101,10 +151,10 @@ function LockedSection({ n, pending = false }: { n: number; pending?: boolean })
   const { emoji, title } = SECTIONS[n - 1];
   return (
     <section className="mt-8 break-inside-avoid rounded-xl border border-dashed border-line-strong bg-paper px-5 py-4">
-      <h2 className="flex items-center gap-3 font-display text-xl font-semibold text-ink">
+      <h2 className="flex items-center gap-3 font-(family-name:--plan-display) text-xl font-semibold text-ink">
         <span aria-hidden>{emoji}</span>
         <span>
-          <span className="mr-2 text-gold">{n}.</span>
+          <span className="mr-2 text-(--plan-accent)">{n}.</span>
           {title}
         </span>
         <span aria-hidden className="ml-auto text-base">
@@ -125,39 +175,103 @@ function LockedSection({ n, pending = false }: { n: number; pending?: boolean })
   );
 }
 
-export function PlanDocumentView(input: PlanViewInput & { preview?: boolean; pending?: boolean }) {
+export function PlanDocumentView(input: PlanViewInput & { preview?: boolean; pending?: boolean; design?: PlanDesign }) {
   const { doc, preview = false, pending = false } = input;
   const v = buildPlanView(input);
+  const d = input.design ?? getPlanDesign(null);
+  const vars = {
+    "--plan-primary": d.primary,
+    "--plan-accent": d.accent,
+    "--plan-soft": d.soft,
+    "--plan-ink": d.ink,
+    "--plan-display": FONT_STACK[d.display],
+    "--plan-body": FONT_STACK[d.body],
+  } as CSSProperties;
+  const cover = d.cover === "pleine" && !v.photos.couverture ? "bandeau" : d.cover;
+  const kpis = (
+    <div className="mt-8 grid grid-cols-2 gap-3 break-inside-avoid sm:grid-cols-4">
+      {v.kpis.map((k) => (
+        <div key={k.label} className="rounded-xl border border-(--plan-primary)/20 bg-(--plan-soft) p-4 print:p-3">
+          <p className="text-2xl" aria-hidden>
+            {k.emoji}
+          </p>
+          <p className="mt-2 text-xs font-semibold text-ink-soft">{k.label}</p>
+          <p className="mt-1 font-(family-name:--plan-display) text-lg font-semibold tabular-nums text-(--plan-ink) print:text-sm">{k.value}</p>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
-    <article className="relative rounded-2xl border border-line bg-surface p-6 sm:p-10 print:rounded-none print:border-0 print:p-0">
+    <article
+      style={vars}
+      data-design={d.id}
+      className="relative rounded-2xl border border-line bg-surface p-6 font-(family-name:--plan-body) [print-color-adjust:exact] [-webkit-print-color-adjust:exact] sm:p-10 print:rounded-none print:border-0 print:p-0"
+    >
       {preview && !pending ? <Watermark /> : null}
-      <header>
-        <Photo photo={v.photos.couverture} tall />
-        <p className={`text-xs font-semibold uppercase tracking-[0.14em] text-gold ${v.photos.couverture ? "mt-6" : ""}`}>
-          🚀 Business plan
-        </p>
-        <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight text-ink sm:text-5xl">{v.title}</h1>
-        <p className="mt-3 text-lg text-ink-soft">{v.subtitle}</p>
-        <p className="mt-2 text-sm text-muted">{v.dateLine}</p>
-        <div className="mt-8 grid grid-cols-2 gap-3 break-inside-avoid sm:grid-cols-4">
-          {v.kpis.map((k) => (
-            <div key={k.label} className="rounded-xl border border-forest/20 bg-forest-50 p-4 print:p-3">
-              <p className="text-2xl" aria-hidden>
-                {k.emoji}
-              </p>
-              <p className="mt-2 text-xs font-semibold text-ink-soft">{k.label}</p>
-              <p className="mt-1 font-display text-lg font-semibold tabular-nums text-ink print:text-sm">{k.value}</p>
+      {cover === "classique" ? (
+        <header>
+          <PatternBand design={d} className="mb-6" />
+          <Photo photo={v.photos.couverture} tall />
+          <p className={`text-xs font-semibold uppercase tracking-[0.14em] text-(--plan-accent) ${v.photos.couverture ? "mt-6" : ""}`}>
+            🚀 Business plan
+          </p>
+          <h1 className="mt-3 font-(family-name:--plan-display) text-4xl font-semibold tracking-tight text-(--plan-ink) sm:text-5xl">{v.title}</h1>
+          <p className="mt-3 text-lg text-ink-soft">{v.subtitle}</p>
+          <p className="mt-2 text-sm text-muted">{v.dateLine}</p>
+          {kpis}
+        </header>
+      ) : cover === "bandeau" ? (
+        <header>
+          <div className="overflow-hidden rounded-2xl bg-(--plan-primary) text-white break-inside-avoid">
+            <PatternBand design={d} className="rounded-none" />
+            <div className="px-6 py-8 sm:px-8 sm:py-10">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/80">🚀 Business plan</p>
+              <h1 className="mt-3 font-(family-name:--plan-display) text-4xl font-semibold tracking-tight sm:text-5xl">{v.title}</h1>
+              <p className="mt-3 text-lg text-white/90">{v.subtitle}</p>
+              <p className="mt-2 text-sm text-white/75">{v.dateLine}</p>
             </div>
-          ))}
-        </div>
-      </header>
+          </div>
+          {v.photos.couverture ? (
+            <div className="mt-6">
+              <Photo photo={v.photos.couverture} tall />
+            </div>
+          ) : null}
+          {kpis}
+        </header>
+      ) : (
+        <header>
+          <PatternBand design={d} className="mb-4" />
+          {v.photos.couverture ? (
+            <figure className="relative overflow-hidden rounded-2xl break-inside-avoid">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={v.photos.couverture.src}
+                alt={v.photos.couverture.alt || ""}
+                loading="eager"
+                className="aspect-[16/10] w-full object-cover print:aspect-[16/9]"
+              />
+              <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/35 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-6 text-white sm:p-8">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/85">🚀 Business plan</p>
+                <h1 className="mt-2 font-(family-name:--plan-display) text-4xl font-semibold tracking-tight sm:text-5xl">{v.title}</h1>
+                <p className="mt-2 text-lg text-white/90">{v.subtitle}</p>
+                <p className="mt-1 text-sm text-white/75">{v.dateLine}</p>
+                <figcaption className="mt-3 text-[11px]">
+                  <PhotoCredit photo={v.photos.couverture} light />
+                </figcaption>
+              </div>
+            </figure>
+          ) : null}
+          {kpis}
+        </header>
+      )}
 
-      <Section n={1}>
+      <Section n={1} heading={d.heading}>
         <Paragraphs text={doc.resume} />
       </Section>
 
-      <Section n={2}>
+      <Section n={2} heading={d.heading}>
         <Paragraphs text={doc.projet} />
         <Photo photo={v.photos.projet} />
         <Sub title="🛍️ Ce que nous vendons">
@@ -177,7 +291,7 @@ export function PlanDocumentView(input: PlanViewInput & { preview?: boolean; pen
         </>
       ) : (
         <>
-      <Section n={3}>
+      <Section n={3} heading={d.heading}>
         <Photo photo={v.photos.marche} />
         <Sub title="🧑‍🤝‍🧑 Clientèle">
           <Paragraphs text={doc.marche.clientele} />
@@ -190,7 +304,7 @@ export function PlanDocumentView(input: PlanViewInput & { preview?: boolean; pen
         </Sub>
       </Section>
 
-      <Section n={4}>
+      <Section n={4} heading={d.heading}>
         <Paragraphs text={doc.emplacement.analyse} />
         {doc.emplacement.criteres.length > 0 ? (
           <Table>
@@ -205,7 +319,7 @@ export function PlanDocumentView(input: PlanViewInput & { preview?: boolean; pen
               {doc.emplacement.criteres.map((c) => (
                 <tr key={c.critere} className="border-b border-line/70 last:border-0">
                   <td className={`${td} font-semibold`}>{c.critere}</td>
-                  <td className={`${td} whitespace-nowrap text-gold`} aria-label={`${c.note} sur 5`}>
+                  <td className={`${td} whitespace-nowrap text-(--plan-accent)`} aria-label={`${c.note} sur 5`}>
                     {stars(c.note)}
                   </td>
                   <td className={`${td} text-ink-soft`}>{c.commentaire}</td>
@@ -217,7 +331,7 @@ export function PlanDocumentView(input: PlanViewInput & { preview?: boolean; pen
         <p className="text-xs text-muted">ℹ️ Notes indicatives, à confirmer par une visite sur place.</p>
       </Section>
 
-      <Section n={5}>
+      <Section n={5} heading={d.heading}>
         <Sub title="🧱 Investissements de départ">
           <Table>
             <tbody>
@@ -312,10 +426,10 @@ export function PlanDocumentView(input: PlanViewInput & { preview?: boolean; pen
             </ul>
           </Sub>
         ) : null}
-        <p className="rounded-xl bg-gold-50 px-4 py-3">👉 {v.outlook}</p>
+        <p className="rounded-xl bg-(--plan-soft) px-4 py-3">👉 {v.outlook}</p>
       </Section>
 
-      <Section n={6}>
+      <Section n={6} heading={d.heading}>
         <p>
           <strong>🎯 Message :</strong> {doc.marketing.message}
         </p>
@@ -359,7 +473,7 @@ export function PlanDocumentView(input: PlanViewInput & { preview?: boolean; pen
         </Sub>
       </Section>
 
-      <Section n={7}>
+      <Section n={7} heading={d.heading}>
         <ul className="flex flex-col gap-3">
           {doc.risques.map((x) => (
             <li key={x.risque} className="break-inside-avoid">
@@ -370,9 +484,9 @@ export function PlanDocumentView(input: PlanViewInput & { preview?: boolean; pen
         </ul>
       </Section>
 
-      <Section n={8}>
+      <Section n={8} heading={d.heading}>
         {v.creationLines.length > 0 ? (
-          <div className="rounded-xl border border-forest/20 bg-forest-50 px-4 py-3 break-inside-avoid">
+          <div className="rounded-xl border border-(--plan-primary)/20 bg-(--plan-soft) px-4 py-3 break-inside-avoid">
             {v.creationLines.map((line) => (
               <p key={line}>🏛️ {line}</p>
             ))}
@@ -386,14 +500,17 @@ export function PlanDocumentView(input: PlanViewInput & { preview?: boolean; pen
         <p className="text-sm text-muted">ℹ️ Frais, délais et pièces à confirmer auprès de l&apos;ANPI-Gabon.</p>
       </Section>
 
-      <Section n={9}>
+      <Section n={9} heading={d.heading}>
         <Paragraphs text={doc.conclusion} />
       </Section>
 
         </>
       )}
 
-      <footer className="mt-12 border-t border-line pt-4 text-xs leading-relaxed text-muted">{v.footer}</footer>
+      <footer className="mt-12 border-t border-line pt-4 text-xs leading-relaxed text-muted">
+        <PatternBand design={d} className="mb-4" />
+        {v.footer}
+      </footer>
     </article>
   );
 }

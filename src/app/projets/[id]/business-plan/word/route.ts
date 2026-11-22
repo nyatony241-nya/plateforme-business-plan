@@ -7,6 +7,7 @@ import { getCreationSummary } from "@/lib/data/creation";
 import { isPlanUnlocked } from "@/lib/data/credits";
 import { getAssumptions, getMyProject, getPlanDocument } from "@/lib/data/projects";
 import { getCurrentUser } from "@/lib/supabase/server";
+import { getPlanDesign } from "@/lib/plan-designs";
 import { businessPlanDocx } from "@/lib/word/business-plan-docx";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -66,7 +67,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/projets/[id]/bu
     },
     minimumWage: country.provenance.find((p) => p.code === "revenu_minimum_mensuel")?.value ?? 150_000,
     creation,
-  });
+  }, getPlanDesign(project.plan_design));
 
   return new Response(new Uint8Array(buffer), {
     headers: {
