@@ -196,6 +196,14 @@ describe("photos fidèles à l'activité", () => {
     expect(photos.marche?.id).toBe("scene");
   });
 
+  it("une boutique vide n'illustre pas les clients", async () => {
+    const { photoScore } = await import("@/lib/images/photos");
+    const terms = { keywords: ["sock", "socks"], trade: ["clothing", "clothes"] };
+    const shop = photoScore({ alt: "Clothes are displayed for sale in a colorful shop" }, "marche", terms);
+    const browsing = photoScore({ alt: "Woman browses clothing on a rack in a shop" }, "marche", terms);
+    expect(browsing).toBeGreaterThan(shop);
+  });
+
   it("chaque recherche nomme ce que l'entreprise vend", async () => {
     const { photoBrief } = await import("@/lib/ai/generate-plan-document");
     const brief = photoBrief({

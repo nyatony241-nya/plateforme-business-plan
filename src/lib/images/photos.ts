@@ -125,9 +125,11 @@ const words = (text: string) =>
     .toLowerCase()
     .split(/[^a-z]+/)
     .filter((w) => w.length >= 3)
-    .map((w) => w.replace(/s$/, ""));
+    .map((w) => (w.endsWith("ss") ? w : w.replace(/s$/, "")));
+/** Même mot, à une variante près (browse / browsing, clothe / clothing) ; « shop » ≠ « shopping ». */
 const sameWord = (a: string, b: string) =>
-  a === b || (Math.min(a.length, b.length) >= 4 && (a.startsWith(b) || b.startsWith(a)));
+  a === b ||
+  (Math.min(a.length, b.length) >= 5 && Math.abs(a.length - b.length) <= 3 && (a.startsWith(b) || b.startsWith(a)));
 const mentions = (text: string, list: string[]) => {
   const w = words(text);
   return list.some((k) => words(k).every((part) => w.some((x) => sameWord(x, part))));
