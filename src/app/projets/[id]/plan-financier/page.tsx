@@ -12,6 +12,7 @@ import { formatDateFr } from "@/lib/data-status";
 import { isSupabaseConfigured } from "@/lib/env";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { GenerateForm } from "../generate-form";
+import { isPlanUnlocked } from "@/lib/data/credits";
 import { PlanEditor } from "./editor";
 
 export const metadata: Metadata = { title: "Plan financier" };
@@ -40,7 +41,11 @@ export default async function FinancialPlanPage({ params }: PageProps<"/projets/
   const project = await getMyProject(id);
   if (!project) notFound();
 
-  const [saved, country] = await Promise.all([getAssumptions(id), getCountryParams(project.country_code, { legalForm: recommendLegalForm(project).form })]);
+  const [saved, country, unlocked] = await Promise.all([
+    getAssumptions(id),
+    getCountryParams(project.country_code, { legalForm: recommendLegalForm(project).form }),
+    isPlanUnlocked(id),
+  ]);
   const parsed = saved ? assumptionsSchema.safeParse(saved.data) : null;
   const initial = parsed?.success ? parsed.data : null;
   const defaults = { budget: project.budget, mode: project.mode, staffing: project.staffing };
@@ -138,6 +143,7 @@ export default async function FinancialPlanPage({ params }: PageProps<"/projets/
                 initialSavedAt={saved.updatedAt}
                 params={country.params}
                 provenance={country.provenance}
+                unlockHref={unlocked ? undefined : `/projets/${id}/business-plan`}
               />
             </div>
           </>

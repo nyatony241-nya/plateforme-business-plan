@@ -7,6 +7,7 @@ import { generatePlanDocument } from "@/lib/ai/generate-plan-document";
 import { DEFAULT_MODEL } from "@/lib/ai/model";
 import { assumptionsSchema, toPlanInput } from "@/lib/assumptions";
 import { getCountryParams } from "@/lib/data/country-params";
+import { unlockPlan } from "@/lib/data/credits";
 import { findPlanPhotos, reportDownload } from "@/lib/images/photos";
 import {
   countMyAiRunsSince,
@@ -91,4 +92,13 @@ export async function writeBusinessPlan(projectId: string): Promise<FormState> {
   }
 
   redirect(`/projets/${projectId}/business-plan`);
+}
+
+/** Débloque le business plan contre 1 crédit ; sans crédit, envoie vers l'achat. */
+export async function unlockPlanAction(projectId: string): Promise<void> {
+  if (!UUID.test(projectId)) redirect("/tableau-de-bord");
+  const user = await getCurrentUser();
+  if (!user) redirect(`/connexion?suite=/projets/${projectId}/business-plan`);
+  const ok = await unlockPlan(projectId);
+  redirect(ok ? `/projets/${projectId}/business-plan` : `/credits?projet=${projectId}`);
 }

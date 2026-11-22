@@ -4,6 +4,7 @@ import { assumptionsSchema, toPlanInput } from "@/lib/assumptions";
 import { planDocumentSchema } from "@/lib/business-plan";
 import { getCountryParams } from "@/lib/data/country-params";
 import { getCreationSummary } from "@/lib/data/creation";
+import { isPlanUnlocked } from "@/lib/data/credits";
 import { getAssumptions, getMyProject, getPlanDocument } from "@/lib/data/projects";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { businessPlanDocx } from "@/lib/word/business-plan-docx";
@@ -31,6 +32,10 @@ export async function GET(_request: Request, ctx: RouteContext<"/projets/[id]/bu
 
   const project = await getMyProject(id);
   if (!project) return new Response("Projet introuvable.", { status: 404 });
+  // Le document complet n'est remis qu'une fois le plan débloqué.
+  if (!(await isPlanUnlocked(id))) {
+    return Response.redirect(new URL(`/projets/${id}/business-plan`, _request.url), 303);
+  }
 
   const [savedAssumptions, savedDocument, country] = await Promise.all([
     getAssumptions(id),

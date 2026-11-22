@@ -126,12 +126,15 @@ export function Results({
   scenario,
   onScenario,
   owner,
+  unlockHref,
 }: {
   results: Record<ScenarioId, PlanResult>;
   scenario: ScenarioId;
   onScenario: (s: ScenarioId) => void;
   /** Présent quand l'entrepreneur travaille seul, sans salaire prévu. */
   owner?: { minimumWage: number };
+  /** Présent tant que le business plan n'est pas débloqué : le détail des chiffres est réservé. */
+  unlockHref?: string;
 }) {
   const r = results[scenario];
   const y1 = r.years[0];
@@ -193,79 +196,94 @@ export function Results({
         />
       </div>
 
-      <details className="rounded-2xl border border-line bg-surface">
-        <summary className="cursor-pointer px-5 py-4 text-sm font-semibold text-forest">Voir tous les chiffres</summary>
-        <div className="flex flex-col gap-4 border-t border-line p-4 sm:p-5">
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Kpi
-              label="Seuil de rentabilité, an 1"
-              value={y1.breakEvenRevenue !== null ? formatXaf(y1.breakEvenRevenue) : "Non calculable"}
-              detail="Ventes qui couvrent toutes les charges"
-            />
-            <Kpi
-              label="Marge brute, an 1"
-              value={y1.grossMarginRate !== null ? formatPercent(y1.grossMarginRate) : "—"}
-            />
-            <Kpi
-              label="Mise de départ récupérée en"
-              value={r.indicators.paybackMonth ? `${r.indicators.paybackMonth} mois` : "Au-delà de la période"}
-            />
-            <Kpi
-              label="Rentabilité de l'investissement"
-              value={r.indicators.returnOnInvestment !== null ? formatPercent(r.indicators.returnOnInvestment) : "—"}
-              detail={`Bénéfice cumulé sur ${r.years.length} ans / investissements`}
-            />
-          </div>
-          <div className="overflow-x-auto rounded-xl border border-line">
-            <table className="w-full min-w-[520px] text-sm tabular-nums">
-              <caption className="px-4 pt-4 text-left text-sm font-bold text-ink">
-                Compte de résultat prévisionnel · scénario {SCENARIO_LABEL[scenario].toLowerCase()}
-              </caption>
-              <thead>
-                <tr className="border-b border-line text-xs text-muted">
-                  <th scope="col" className="px-4 py-3 text-left font-semibold">
-                    En FCFA, hors taxes
-                  </th>
-                  {r.years.map((year) => (
-                    <th key={year.year} scope="col" className="px-4 py-3 text-right font-semibold">
-                      An {year.year}
+      {unlockHref ? (
+        <a
+          href={unlockHref}
+          className="flex items-center justify-between gap-3 rounded-2xl border border-dashed border-line-strong bg-paper px-5 py-4 text-sm"
+        >
+          <span>
+            <span className="font-semibold text-ink">🔒 Tous les chiffres</span>
+            <span className="mt-0.5 block text-muted">
+              Tableaux sur 3 ans, trois scénarios et trésorerie mois par mois, avec le business plan complet.
+            </span>
+          </span>
+          <span className="shrink-0 font-semibold text-forest">Débloquer</span>
+        </a>
+      ) : (
+        <details className="rounded-2xl border border-line bg-surface">
+          <summary className="cursor-pointer px-5 py-4 text-sm font-semibold text-forest">Voir tous les chiffres</summary>
+          <div className="flex flex-col gap-4 border-t border-line p-4 sm:p-5">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <Kpi
+                label="Seuil de rentabilité, an 1"
+                value={y1.breakEvenRevenue !== null ? formatXaf(y1.breakEvenRevenue) : "Non calculable"}
+                detail="Ventes qui couvrent toutes les charges"
+              />
+              <Kpi
+                label="Marge brute, an 1"
+                value={y1.grossMarginRate !== null ? formatPercent(y1.grossMarginRate) : "—"}
+              />
+              <Kpi
+                label="Mise de départ récupérée en"
+                value={r.indicators.paybackMonth ? `${r.indicators.paybackMonth} mois` : "Au-delà de la période"}
+              />
+              <Kpi
+                label="Rentabilité de l'investissement"
+                value={r.indicators.returnOnInvestment !== null ? formatPercent(r.indicators.returnOnInvestment) : "—"}
+                detail={`Bénéfice cumulé sur ${r.years.length} ans / investissements`}
+              />
+            </div>
+            <div className="overflow-x-auto rounded-xl border border-line">
+              <table className="w-full min-w-[520px] text-sm tabular-nums">
+                <caption className="px-4 pt-4 text-left text-sm font-bold text-ink">
+                  Compte de résultat prévisionnel · scénario {SCENARIO_LABEL[scenario].toLowerCase()}
+                </caption>
+                <thead>
+                  <tr className="border-b border-line text-xs text-muted">
+                    <th scope="col" className="px-4 py-3 text-left font-semibold">
+                      En FCFA, hors taxes
                     </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {LINES.filter((line) => line.key !== "setupCosts" || r.years.some((year) => year.setupCosts > 0)).map(
-                  (line) => (
-                    <tr key={line.key} className="border-b border-line/70 last:border-0">
-                      <th
-                        scope="row"
-                        className={`px-4 py-2.5 text-left ${line.strong ? "font-bold text-ink" : "font-normal text-ink-soft"}`}
-                      >
-                        {line.label}
+                    {r.years.map((year) => (
+                      <th key={year.year} scope="col" className="px-4 py-3 text-right font-semibold">
+                        An {year.year}
                       </th>
-                      {r.years.map((year) => {
-                        const value = year[line.key] as number;
-                        return (
-                          <td
-                            key={year.year}
-                            className={`whitespace-nowrap px-4 py-2.5 text-right ${line.strong ? "font-bold text-ink" : "text-ink-soft"}`}
-                          >
-                            {line.negative && value !== 0 ? `−${formatNumber(value)}` : formatNumber(value)}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ),
-                )}
-              </tbody>
-            </table>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {LINES.filter((line) => line.key !== "setupCosts" || r.years.some((year) => year.setupCosts > 0)).map(
+                    (line) => (
+                      <tr key={line.key} className="border-b border-line/70 last:border-0">
+                        <th
+                          scope="row"
+                          className={`px-4 py-2.5 text-left ${line.strong ? "font-bold text-ink" : "font-normal text-ink-soft"}`}
+                        >
+                          {line.label}
+                        </th>
+                        {r.years.map((year) => {
+                          const value = year[line.key] as number;
+                          return (
+                            <td
+                              key={year.year}
+                              className={`whitespace-nowrap px-4 py-2.5 text-right ${line.strong ? "font-bold text-ink" : "text-ink-soft"}`}
+                            >
+                              {line.negative && value !== 0 ? `−${formatNumber(value)}` : formatNumber(value)}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ),
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-muted">
+              Calculs faits par le moteur financier v{r.engineVersion}, sans intelligence artificielle. Montants hors
+              taxes ; impôt calculé à la clôture de chaque exercice.
+            </p>
           </div>
-          <p className="text-xs text-muted">
-            Calculs faits par le moteur financier v{r.engineVersion}, sans intelligence artificielle. Montants hors
-            taxes ; impôt calculé à la clôture de chaque exercice.
-          </p>
-        </div>
-      </details>
+        </details>
+      )}
     </div>
   );
 }

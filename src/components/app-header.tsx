@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { BrandLink } from "@/components/brand";
 
 /** En-tête de l'espace connecté. Sans nom (base non raccordée), pas de déconnexion. */
@@ -8,6 +9,9 @@ export function AppHeader({ name }: { name?: string | null }) {
         <BrandLink href={name ? "/tableau-de-bord" : "/"} />
         {name ? (
           <div className="flex items-center gap-3">
+            <Link href="/credits" className="rounded-lg px-3 py-2 text-sm font-semibold text-ink-soft hover:text-forest">
+              🪙 Crédits
+            </Link>
             <span className="hidden text-sm text-ink-soft sm:inline">{name}</span>
             <form action="/deconnexion" method="post">
               <button type="submit" className="rounded-lg px-3 py-2 text-sm font-semibold text-ink-soft hover:text-forest">

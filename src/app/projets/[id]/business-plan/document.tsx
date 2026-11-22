@@ -3,6 +3,7 @@ import { CashChart } from "@/components/cash-chart";
 import { SCENARIO_LABEL } from "@/engine";
 import type { PlanPhoto } from "@/lib/business-plan";
 import { SECTIONS, buildPlanView, paragraphs, photoSourceName, photoSourceUrl, stars, type PlanViewInput } from "@/lib/business-plan-view";
+import { LOCKED_CONTENTS, PREVIEW_SECTIONS } from "@/lib/plan-preview";
 import { SCENARIO_COLOR, SCENARIO_ORDER } from "@/lib/scenario-colors";
 
 function Section({ n, children }: { n: number; children: ReactNode }) {
@@ -80,12 +81,57 @@ function Photo({ photo, tall = false }: { photo?: PlanPhoto; tall?: boolean }) {
   );
 }
 
-export function PlanDocumentView(input: PlanViewInput) {
-  const { doc } = input;
+/** Filigrane de l'aperçu, à l'écran comme à l'impression : la copie n'est pas utilisable. */
+const WATERMARK = `url("data:image/svg+xml,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="420" height="260"><text x="210" y="140" text-anchor="middle" transform="rotate(-28 210 130)" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="rgba(168,119,31,0.22)">APERÇU · NON VALABLE</text></svg>',
+)}")`;
+
+function Watermark() {
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-0 z-10 select-none [print-color-adjust:exact] [-webkit-print-color-adjust:exact]"
+      style={{ backgroundImage: WATERMARK, backgroundRepeat: "repeat" }}
+    />
+  );
+}
+
+/** Partie verrouillée : son titre et ce qu'elle contient, sans son texte. */
+function LockedSection({ n }: { n: number }) {
+  const { emoji, title } = SECTIONS[n - 1];
+  return (
+    <section className="mt-8 break-inside-avoid rounded-xl border border-dashed border-line-strong bg-paper px-5 py-4">
+      <h2 className="flex items-center gap-3 font-display text-xl font-semibold text-ink">
+        <span aria-hidden>{emoji}</span>
+        <span>
+          <span className="mr-2 text-gold">{n}.</span>
+          {title}
+        </span>
+        <span aria-hidden className="ml-auto text-base">
+          🔒
+        </span>
+      </h2>
+      <ul className="mt-2 flex flex-col gap-1 text-sm text-muted">
+        {(LOCKED_CONTENTS[n] ?? []).map((item) => (
+          <li key={item}>• {item}</li>
+        ))}
+      </ul>
+      <div aria-hidden className="mt-3 flex flex-col gap-2 blur-[3px]">
+        <div className="h-2.5 w-full rounded bg-line" />
+        <div className="h-2.5 w-11/12 rounded bg-line" />
+        <div className="h-2.5 w-4/5 rounded bg-line" />
+      </div>
+    </section>
+  );
+}
+
+export function PlanDocumentView(input: PlanViewInput & { preview?: boolean }) {
+  const { doc, preview = false } = input;
   const v = buildPlanView(input);
 
   return (
-    <article className="rounded-2xl border border-line bg-surface p-6 sm:p-10 print:rounded-none print:border-0 print:p-0">
+    <article className="relative rounded-2xl border border-line bg-surface p-6 sm:p-10 print:rounded-none print:border-0 print:p-0">
+      {preview ? <Watermark /> : null}
       <header>
         <Photo photo={v.photos.couverture} tall />
         <p className={`text-xs font-semibold uppercase tracking-[0.14em] text-gold ${v.photos.couverture ? "mt-6" : ""}`}>
@@ -123,6 +169,14 @@ export function PlanDocumentView(input: PlanViewInput) {
         </Sub>
       </Section>
 
+      {preview ? (
+        <>
+          {SECTIONS.slice(PREVIEW_SECTIONS).map((_, i) => (
+            <LockedSection key={i} n={PREVIEW_SECTIONS + i + 1} />
+          ))}
+        </>
+      ) : (
+        <>
       <Section n={3}>
         <Photo photo={v.photos.marche} />
         <Sub title="🧑‍🤝‍🧑 Clientèle">
@@ -335,6 +389,9 @@ export function PlanDocumentView(input: PlanViewInput) {
       <Section n={9}>
         <Paragraphs text={doc.conclusion} />
       </Section>
+
+        </>
+      )}
 
       <footer className="mt-12 border-t border-line pt-4 text-xs leading-relaxed text-muted">{v.footer}</footer>
     </article>

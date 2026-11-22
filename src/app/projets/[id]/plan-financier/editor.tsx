@@ -92,12 +92,14 @@ export function PlanEditor({
   initialSavedAt,
   params,
   provenance,
+  unlockHref,
 }: {
   projectId: string;
   initial: Assumptions;
   initialSavedAt: string | null;
   params: CountryParams;
   provenance: ParamProvenance[];
+  unlockHref?: string;
 }) {
   const [a, setA] = useState<Assumptions>(initial);
   const [scenario, setScenario] = useState<ScenarioId>("realiste");
@@ -180,6 +182,7 @@ export function PlanEditor({
             scenario={scenario}
             onScenario={setScenario}
             owner={a.staff.length === 0 ? { minimumWage } : undefined}
+            unlockHref={unlockHref}
           />
         ) : (
           <div role="alert" className="rounded-2xl border border-danger/40 bg-danger-50 p-5 text-sm text-danger">

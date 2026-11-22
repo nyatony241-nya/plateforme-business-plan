@@ -10,6 +10,10 @@ import { assumptionsSchema, toPlanInput } from "@/lib/assumptions";
 import { planDocumentSchema } from "@/lib/business-plan";
 import { getCountryParams } from "@/lib/data/country-params";
 import { getCreationSummary } from "@/lib/data/creation";
+import { getCreditBalance, getCreditPacks, isPlanUnlocked } from "@/lib/data/credits";
+import { formatXaf } from "@/lib/format";
+import { PREVIEW_SECTIONS, previewDocument } from "@/lib/plan-preview";
+import { SECTIONS } from "@/lib/business-plan-view";
 import {
   getAssumptions,
   getMyProject,
@@ -18,6 +22,7 @@ import {
 import { isSupabaseConfigured } from "@/lib/env";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { PlanDocumentView } from "./document";
+import { unlockPlanAction } from "./actions";
 import { PrintButton } from "./print-button";
 import { WriteButton } from "./write-button";
 
@@ -54,7 +59,13 @@ export default async function BusinessPlanPage({
     getPlanDocument(id),
     getCountryParams(project.country_code, { legalForm: recommendLegalForm(project).form }),
   ]);
-  const creation = await getCreationSummary(project).catch(() => undefined);
+  const [creation, unlocked, balance, packs] = await Promise.all([
+    getCreationSummary(project).catch(() => undefined),
+    isPlanUnlocked(id),
+    getCreditBalance().catch(() => 0),
+    getCreditPacks().catch(() => []),
+  ]);
+  const fromPrice = packs.length > 0 ? Math.min(...packs.map((p) => p.price_xaf)) : null;
   const assumptions = savedAssumptions
     ? assumptionsSchema.safeParse(savedAssumptions.data)
     : null;
@@ -124,6 +135,7 @@ export default async function BusinessPlanPage({
                 </div>
               </section>
             ) : null}
+            {unlocked ? (
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
               <p className="text-sm text-muted">
                 Pour le PDF, choisissez « Enregistrer en PDF » dans la fenêtre
@@ -140,6 +152,9 @@ export default async function BusinessPlanPage({
                 </a>
               </div>
             </div>
+            ) : (
+              <UnlockPanel projectId={id} balance={balance} fromPrice={fromPrice} />
+            )}
             {/* Cadre d'impression : marges sur chaque page, sans l'adresse ni la date du navigateur. */}
             <table className="print-frame mt-6 print:mt-0">
               <thead aria-hidden>
@@ -160,7 +175,8 @@ export default async function BusinessPlanPage({
                 <tr>
                   <td>
                     <PlanDocumentView
-                      doc={doc.data}
+                      doc={unlocked ? doc.data : previewDocument(doc.data)}
+                      preview={!unlocked}
                       a={assumptions.data}
                       results={computeScenarios(
                         toPlanInput(assumptions.data, country.params),
@@ -179,6 +195,11 @@ export default async function BusinessPlanPage({
                 </tr>
               </tbody>
             </table>
+            {unlocked ? null : (
+              <div className="mt-6">
+                <UnlockPanel projectId={id} balance={balance} fromPrice={fromPrice} />
+              </div>
+            )}
             <details className="mt-6 rounded-2xl border border-line bg-surface px-5 py-4 print:hidden">
               <summary className="cursor-pointer text-sm font-semibold text-forest">
                 Rédiger à nouveau
@@ -195,5 +216,44 @@ export default async function BusinessPlanPage({
         )}
       </main>
     </>
+  );
+}
+
+/** Aperçu gratuit : ce qui manque, et comment le débloquer. */
+function UnlockPanel({
+  projectId,
+  balance,
+  fromPrice,
+}: {
+  projectId: string;
+  balance: number;
+  fromPrice: number | null;
+}) {
+  return (
+    <section className="mt-4 rounded-2xl border border-forest/30 bg-forest-50 p-5 print:hidden">
+      <p className="font-semibold text-ink">
+        🔒 Aperçu gratuit : {PREVIEW_SECTIONS} parties sur {SECTIONS.length}
+      </p>
+      <p className="mt-1 text-sm text-ink-soft">
+        Débloquez le business plan complet : marché, emplacement, plan financier détaillé, marketing sur 90 jours,
+        risques et démarches. Sans filigrane, à télécharger en PDF et en Word.
+      </p>
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+        {balance > 0 ? (
+          <form action={unlockPlanAction.bind(null, projectId)}>
+            <button type="submit" className={buttonClass("primary")}>
+              🔓 Débloquer avec 1 crédit
+            </button>
+          </form>
+        ) : (
+          <ButtonLink href={`/credits?projet=${projectId}`}>🔓 Débloquer le business plan</ButtonLink>
+        )}
+        <p className="text-sm text-muted">
+          {balance > 0
+            ? `Il vous reste ${balance} crédit${balance > 1 ? "s" : ""}.`
+            : `1 crédit = 1 business plan complet${fromPrice ? `, à partir de ${formatXaf(fromPrice)}` : ""}.`}
+        </p>
+      </div>
+    </section>
   );
 }
