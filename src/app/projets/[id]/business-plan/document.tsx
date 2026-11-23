@@ -2,83 +2,19 @@ import type { CSSProperties, ReactNode } from "react";
 import { CashChart } from "@/components/cash-chart";
 import { SCENARIO_LABEL } from "@/engine";
 import type { PlanPhoto } from "@/lib/business-plan";
-import { SECTIONS, buildPlanView, paragraphs, photoSourceName, photoSourceUrl, stars, type PlanViewInput } from "@/lib/business-plan-view";
-import { FONT_STACK, getPlanDesign, patternCss, type PlanDesign, type PlanHeading } from "@/lib/plan-designs";
+import { SECTIONS, buildPlanView, paragraphs, stars, type PlanViewInput } from "@/lib/business-plan-view";
+import { FONT_STACK, getPlanDesign, type PlanDesign } from "@/lib/plan-designs";
+import { Cover, PatternBand, PhotoCredit, SectionHeading, photoTone } from "./design-parts";
 import { LOCKED_CONTENTS, PREVIEW_SECTIONS } from "@/lib/plan-preview";
 import { watermarkCss } from "@/lib/watermark";
 import { SCENARIO_COLOR, SCENARIO_ORDER } from "@/lib/scenario-colors";
 
-/** Titre de partie, selon le style du design : numéro, pastille ou bande. */
-function SectionHeading({ n, heading }: { n: number; heading: PlanHeading }) {
-  const { emoji, title } = SECTIONS[n - 1];
-  const display = "font-(family-name:--plan-display) text-2xl font-semibold text-(--plan-ink)";
-  if (heading === "pastille") {
-    return (
-      <h2 className={`flex items-center gap-3 break-after-avoid border-b-2 border-(--plan-primary)/25 pb-2.5 ${display}`}>
-        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-(--plan-primary) text-lg font-bold text-white">
-          {n}
-        </span>
-        <span>
-          <span aria-hidden className="mr-2">
-            {emoji}
-          </span>
-          {title}
-        </span>
-      </h2>
-    );
-  }
-  if (heading === "bande") {
-    return (
-      <h2 className={`flex items-center gap-3 break-after-avoid rounded-lg border-l-4 border-(--plan-primary) bg-(--plan-soft) px-4 py-2.5 ${display}`}>
-        <span aria-hidden>{emoji}</span>
-        <span>
-          <span className="mr-2 text-(--plan-primary)">{n}.</span>
-          {title}
-        </span>
-      </h2>
-    );
-  }
-  return (
-    <h2 className={`flex items-center gap-3 break-after-avoid border-b border-line pb-2 ${display}`}>
-      <span aria-hidden className="text-2xl">
-        {emoji}
-      </span>
-      <span>
-        <span className="mr-2 text-(--plan-accent)">{n}.</span>
-        {title}
-      </span>
-    </h2>
-  );
-}
-
-function Section({ n, heading, children }: { n: number; heading: PlanHeading; children: ReactNode }) {
+function Section({ n, d, children }: { n: number; d: PlanDesign; children: ReactNode }) {
   return (
     <section className="mt-12 print:mt-8">
-      <SectionHeading n={n} heading={heading} />
-      <div className="mt-4 flex flex-col gap-4 leading-relaxed text-ink">{children}</div>
+      <SectionHeading n={n} d={d} />
+      <div className="mt-5 flex flex-col gap-4 leading-relaxed text-ink">{children}</div>
     </section>
-  );
-}
-
-/** Bande de motif africain (kente, bogolan, adire, wax), si le design en a un. */
-function PatternBand({ design, className = "" }: { design: PlanDesign; className?: string }) {
-  const image = patternCss(design.pattern);
-  if (!image) return null;
-  return <div aria-hidden className={`h-3.5 rounded-full ${className}`} style={{ backgroundImage: image, backgroundRepeat: "repeat-x" }} />;
-}
-
-function PhotoCredit({ photo, light = false }: { photo: PlanPhoto; light?: boolean }) {
-  return (
-    <span className={light ? "text-white/80" : "text-muted"}>
-      📷 Photo de{" "}
-      <a href={photo.photographerUrl} className="underline underline-offset-2">
-        {photo.photographer}
-      </a>{" "}
-      sur{" "}
-      <a href={photoSourceUrl(photo)} className="underline underline-offset-2">
-        {photoSourceName(photo)}
-      </a>
-    </span>
   );
 }
 
@@ -95,7 +31,7 @@ function Paragraphs({ text }: { text: string }) {
 function Sub({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="break-inside-avoid">
-      <h3 className="font-semibold text-ink">{title}</h3>
+      <h3 className="font-semibold text-(--plan-primary)">{title}</h3>
       <div className="mt-1 text-ink-soft">{children}</div>
     </div>
   );
@@ -107,13 +43,13 @@ const num = "whitespace-nowrap px-3 py-2 text-right tabular-nums";
 
 function Table({ children }: { children: ReactNode }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-line break-inside-avoid">
+    <div className="plan-table overflow-x-auto rounded-xl border border-line break-inside-avoid">
       <table className="w-full text-sm">{children}</table>
     </div>
   );
 }
 
-function Photo({ photo, tall = false }: { photo?: PlanPhoto; tall?: boolean }) {
+function Photo({ photo, tall = false, tone = "" }: { photo?: PlanPhoto; tall?: boolean; tone?: string }) {
   if (!photo) return null;
   return (
     <figure className="break-inside-avoid">
@@ -123,7 +59,7 @@ function Photo({ photo, tall = false }: { photo?: PlanPhoto; tall?: boolean }) {
         src={photo.src}
         alt={photo.alt || ""}
         loading="eager"
-        className={`w-full rounded-xl object-cover ${tall ? "aspect-[16/8] print:aspect-[16/7]" : "aspect-[16/6] print:aspect-[3/1]"}`}
+        className={`w-full rounded-xl object-cover ${tone} ${tall ? "aspect-[16/8] print:aspect-[16/7]" : "aspect-[16/6] print:aspect-[3/1]"}`}
       />
       <figcaption className="mt-1.5 text-xs">
         <PhotoCredit photo={photo} />
@@ -200,96 +136,32 @@ export function PlanDocumentView(input: PlanViewInput & { preview?: boolean; pen
     "--plan-accent": d.accent,
     "--plan-soft": d.soft,
     "--plan-ink": d.ink,
+    "--plan-paper": d.paper,
     "--plan-display": FONT_STACK[d.display],
     "--plan-body": FONT_STACK[d.body],
+    background: d.paper,
   } as CSSProperties;
-  const cover = d.cover === "pleine" && !v.photos.couverture ? "bandeau" : d.cover;
-  const kpis = (
-    <div className="mt-8 grid grid-cols-2 gap-3 break-inside-avoid sm:grid-cols-4">
-      {v.kpis.map((k) => (
-        <div key={k.label} className="rounded-xl border border-(--plan-primary)/20 bg-(--plan-soft) p-4 print:p-3">
-          <p className="text-2xl" aria-hidden>
-            {k.emoji}
-          </p>
-          <p className="mt-2 text-xs font-semibold text-ink-soft">{k.label}</p>
-          <p className="mt-1 font-(family-name:--plan-display) text-lg font-semibold tabular-nums text-(--plan-ink) print:text-sm">{k.value}</p>
-        </div>
-      ))}
-    </div>
-  );
+  const tone = photoTone(d);
 
   return (
     <article
       style={vars}
       data-design={d.id}
-      className="relative rounded-2xl border border-line bg-surface p-6 font-(family-name:--plan-body) [print-color-adjust:exact] [-webkit-print-color-adjust:exact] sm:p-10 print:rounded-none print:border-0 print:p-0"
+      data-plan-table={d.table}
+      className="relative rounded-2xl border border-line p-6 font-(family-name:--plan-body) [font-synthesis:none] [print-color-adjust:exact] [-webkit-print-color-adjust:exact] sm:p-10 print:rounded-none print:border-0 print:p-0"
     >
+      {/* Fond des pages du PDF, marges comprises. */}
+      {d.paper !== "#ffffff" ? <style>{`@media print{html,body{background:${d.paper}!important}}`}</style> : null}
       {preview && !pending ? <Watermark /> : null}
-      {cover === "classique" ? (
-        <header className="print:break-after-page">
-          <PatternBand design={d} className="mb-6" />
-          <Photo photo={v.photos.couverture} tall />
-          <p className={`text-xs font-semibold uppercase tracking-[0.14em] text-(--plan-accent) ${v.photos.couverture ? "mt-6" : ""}`}>
-            🚀 Business plan
-          </p>
-          <h1 className="mt-3 font-(family-name:--plan-display) text-4xl font-semibold tracking-tight text-(--plan-ink) sm:text-5xl">{v.title}</h1>
-          <p className="mt-3 text-lg text-ink-soft">{v.subtitle}</p>
-          <p className="mt-2 text-sm text-muted">{v.dateLine}</p>
-          {kpis}
-        </header>
-      ) : cover === "bandeau" ? (
-        <header className="print:break-after-page">
-          <div className="overflow-hidden rounded-2xl bg-(--plan-primary) text-white break-inside-avoid">
-            <PatternBand design={d} className="rounded-none" />
-            <div className="px-6 py-8 sm:px-8 sm:py-10">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/80">🚀 Business plan</p>
-              <h1 className="mt-3 font-(family-name:--plan-display) text-4xl font-semibold tracking-tight sm:text-5xl">{v.title}</h1>
-              <p className="mt-3 text-lg text-white/90">{v.subtitle}</p>
-              <p className="mt-2 text-sm text-white/75">{v.dateLine}</p>
-            </div>
-          </div>
-          {v.photos.couverture ? (
-            <div className="mt-6">
-              <Photo photo={v.photos.couverture} tall />
-            </div>
-          ) : null}
-          {kpis}
-        </header>
-      ) : (
-        <header className="print:break-after-page">
-          <PatternBand design={d} className="mb-4" />
-          {v.photos.couverture ? (
-            <figure className="relative overflow-hidden rounded-2xl break-inside-avoid">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={v.photos.couverture.src}
-                alt={v.photos.couverture.alt || ""}
-                loading="eager"
-                className="aspect-[16/10] w-full object-cover print:aspect-[16/9]"
-              />
-              <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/35 to-transparent" />
-              <div className="absolute inset-x-0 bottom-0 p-6 text-white sm:p-8">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/85">🚀 Business plan</p>
-                <h1 className="mt-2 font-(family-name:--plan-display) text-4xl font-semibold tracking-tight sm:text-5xl">{v.title}</h1>
-                <p className="mt-2 text-lg text-white/90">{v.subtitle}</p>
-                <p className="mt-1 text-sm text-white/75">{v.dateLine}</p>
-                <figcaption className="mt-3 text-[11px]">
-                  <PhotoCredit photo={v.photos.couverture} light />
-                </figcaption>
-              </div>
-            </figure>
-          ) : null}
-          {kpis}
-        </header>
-      )}
+      <Cover d={d} v={{ title: v.title, subtitle: v.subtitle, dateLine: v.dateLine, kpis: v.kpis, photo: v.photos.couverture }} />
 
-      <Section n={1} heading={d.heading}>
+      <Section n={1} d={d}>
         <Paragraphs text={doc.resume} />
       </Section>
 
-      <Section n={2} heading={d.heading}>
+      <Section n={2} d={d}>
         <Paragraphs text={doc.projet} />
-        <Photo photo={v.photos.projet} />
+        <Photo photo={v.photos.projet} tone={tone} />
         <Sub title="🛍️ Ce que nous vendons">
           <ul className="list-disc pl-5">
             {v.offers.map((o) => (
@@ -307,8 +179,8 @@ export function PlanDocumentView(input: PlanViewInput & { preview?: boolean; pen
         </div>
       ) : (
         <>
-      <Section n={3} heading={d.heading}>
-        <Photo photo={v.photos.marche} />
+      <Section n={3} d={d}>
+        <Photo photo={v.photos.marche} tone={tone} />
         <Sub title="🧑‍🤝‍🧑 Clientèle">
           <Paragraphs text={doc.marche.clientele} />
         </Sub>
@@ -320,7 +192,7 @@ export function PlanDocumentView(input: PlanViewInput & { preview?: boolean; pen
         </Sub>
       </Section>
 
-      <Section n={4} heading={d.heading}>
+      <Section n={4} d={d}>
         <Paragraphs text={doc.emplacement.analyse} />
         {doc.emplacement.criteres.length > 0 ? (
           <Table>
@@ -347,7 +219,7 @@ export function PlanDocumentView(input: PlanViewInput & { preview?: boolean; pen
         <p className="text-xs text-muted">ℹ️ Notes indicatives, à confirmer par une visite sur place.</p>
       </Section>
 
-      <Section n={5} heading={d.heading}>
+      <Section n={5} d={d}>
         <Sub title="🧱 Investissements de départ">
           <Table>
             <tbody>
@@ -442,14 +314,14 @@ export function PlanDocumentView(input: PlanViewInput & { preview?: boolean; pen
             </ul>
           </Sub>
         ) : null}
-        <p className="rounded-xl bg-(--plan-soft) px-4 py-3">👉 {v.outlook}</p>
+        <p className="rounded-xl border-l-4 border-(--plan-primary) bg-(--plan-soft) px-4 py-3">👉 {v.outlook}</p>
       </Section>
 
-      <Section n={6} heading={d.heading}>
+      <Section n={6} d={d}>
         <p>
           <strong>🎯 Message :</strong> {doc.marketing.message}
         </p>
-        <Photo photo={v.photos.marketing} />
+        <Photo photo={v.photos.marketing} tone={tone} />
         <Table>
           <thead>
             <tr className="border-b border-line">
@@ -489,7 +361,7 @@ export function PlanDocumentView(input: PlanViewInput & { preview?: boolean; pen
         </Sub>
       </Section>
 
-      <Section n={7} heading={d.heading}>
+      <Section n={7} d={d}>
         <ul className="flex flex-col gap-3">
           {doc.risques.map((x) => (
             <li key={x.risque} className="break-inside-avoid">
@@ -500,7 +372,7 @@ export function PlanDocumentView(input: PlanViewInput & { preview?: boolean; pen
         </ul>
       </Section>
 
-      <Section n={8} heading={d.heading}>
+      <Section n={8} d={d}>
         {v.creationLines.length > 0 ? (
           <div className="rounded-xl border border-(--plan-primary)/20 bg-(--plan-soft) px-4 py-3 break-inside-avoid">
             {v.creationLines.map((line) => (
@@ -509,14 +381,14 @@ export function PlanDocumentView(input: PlanViewInput & { preview?: boolean; pen
           </div>
         ) : null}
         <ol className="list-decimal pl-5">
-          {doc.demarches.map((d) => (
-            <li key={d}>{d}</li>
+          {doc.demarches.map((step) => (
+            <li key={step}>{step}</li>
           ))}
         </ol>
         <p className="text-sm text-muted">ℹ️ Frais, délais et pièces à confirmer auprès de {v.agency}.</p>
       </Section>
 
-      <Section n={9} heading={d.heading}>
+      <Section n={9} d={d}>
         <Paragraphs text={doc.conclusion} />
       </Section>
 

@@ -122,3 +122,32 @@ body {
     print-color-adjust: exact;
   }
 }
+
+/* Tableaux du business plan, selon le design : en-tête clair, foncé ou simples filets. */
+[data-plan-table="doux"] .plan-table thead tr {
+  background: var(--plan-soft);
+}
+
+[data-plan-table="fonce"] .plan-table thead tr {
+  background: var(--plan-primary);
+}
+
+[data-plan-table="fonce"] .plan-table thead th {
+  color: #fff;
+}
+
+[data-plan-table="filet"] .plan-table {
+  border-width: 2px 0;
+  border-color: var(--plan-ink);
+  border-radius: 0;
+}
+
+[data-plan-table="filet"] .plan-table thead th {
+  color: var(--plan-ink);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+[data-plan-table] .plan-table tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--plan-soft) 45%, transparent);
+}
