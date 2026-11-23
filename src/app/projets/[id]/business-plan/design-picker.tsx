@@ -3,6 +3,7 @@
 import { useFormStatus } from "react-dom";
 import { FONT_STACK, PLAN_DESIGNS } from "@/lib/plan-designs";
 import { setPlanDesign } from "./actions";
+import { DesignThumb } from "./design-thumb";
 
 function Swatch({ id, current }: { id: string; current: string }) {
   const { pending, data } = useFormStatus();
@@ -15,20 +16,19 @@ function Swatch({ id, current }: { id: string; current: string }) {
       value={d.id}
       aria-pressed={chosen}
       disabled={pending}
-      title={d.description}
+      title={`${d.description} · ${d.signature}`}
       className={`group flex w-full flex-col overflow-hidden rounded-xl border bg-surface text-left transition-shadow disabled:cursor-wait ${
         chosen ? "border-brand ring-4 ring-brand/15" : "border-line hover:shadow-[0_10px_24px_-18px_rgba(35,36,42,0.6)]"
       }`}
     >
-      <span className="flex h-12 items-end px-3 pb-1.5" style={{ background: d.primary }}>
-        <span className="text-lg font-semibold leading-none text-white" style={{ fontFamily: FONT_STACK[d.display] }}>
-          Aa
-        </span>
-        <span aria-hidden className="ml-auto mb-1 size-3 rounded-full ring-2 ring-white/70" style={{ background: d.accent }} />
+      <span aria-hidden className="block border-b border-line">
+        <DesignThumb d={d} />
       </span>
       <span className="px-3 py-2">
-        <span className="block text-xs font-semibold text-ink">{d.name}</span>
-        <span className="block truncate text-[11px] text-muted">{d.description}</span>
+        <span className="block text-sm font-semibold text-ink" style={{ fontFamily: FONT_STACK[d.display] }}>
+          {d.name}
+        </span>
+        <span className="block text-[11px] leading-snug text-muted">{d.signature}</span>
       </span>
     </button>
   );
@@ -42,7 +42,7 @@ export function DesignPicker({ projectId, current }: { projectId: string; curren
         🎨 Design du document{" "}
         <span className="font-normal text-muted">· {PLAN_DESIGNS.find((d) => d.id === current)?.name ?? "Flamme"}</span>
       </summary>
-      <form action={setPlanDesign.bind(null, projectId)} className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
+      <form action={setPlanDesign.bind(null, projectId)} className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {PLAN_DESIGNS.map((d) => (
           <Swatch key={d.id} id={d.id} current={current} />
         ))}

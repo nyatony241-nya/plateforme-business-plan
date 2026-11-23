@@ -33,6 +33,13 @@ describe("les 10 designs du business plan", () => {
     expect(new Set(allowed)).toEqual(new Set(ids));
   });
 
+  it("se distinguent : chacun a sa couverture et son style de titres", () => {
+    expect(new Set(PLAN_DESIGNS.map((d) => d.cover)).size).toBe(10);
+    expect(new Set(PLAN_DESIGNS.map((d) => d.heading)).size).toBe(10);
+    expect(new Set(PLAN_DESIGNS.map((d) => d.kpi)).size).toBe(10);
+    expect(new Set(PLAN_DESIGNS.map((d) => d.signature)).size).toBe(10);
+  });
+
   it("restent lisibles : texte blanc sur la couleur principale, accent et titres sur blanc", () => {
     for (const d of PLAN_DESIGNS) {
       expect(contrast("#ffffff", d.primary), `${d.id} blanc sur principale`).toBeGreaterThanOrEqual(4.5);

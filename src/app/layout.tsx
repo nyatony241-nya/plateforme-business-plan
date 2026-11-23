@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "@fontsource-variable/exo-2";
+import "@fontsource/bebas-neue";
+import "@fontsource/dm-serif-display";
 import "@fontsource-variable/fraunces";
 import "@fontsource-variable/manrope";
 import "@fontsource-variable/montserrat";
