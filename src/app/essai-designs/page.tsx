@@ -69,9 +69,14 @@ export default async function Page(props: { searchParams: Promise<Record<string,
       </main>
     );
   }
+  const designs = id === "all" ? PLAN_DESIGNS : [getPlanDesign(id)];
   return (
-    <main className="mx-auto max-w-4xl p-4">
-      <PlanDocumentView {...input} design={getPlanDesign(id)} />
+    <main className="mx-auto flex max-w-4xl flex-col gap-10 p-4">
+      {designs.map((d) => (
+        <div key={d.id} id={`d-${d.id}`}>
+          <PlanDocumentView {...input} design={d} />
+        </div>
+      ))}
     </main>
   );
 }
