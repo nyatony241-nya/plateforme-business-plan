@@ -47,6 +47,8 @@ export default async function Page(props: { searchParams: Promise<Record<string,
   const [cover, projet, marche, marketing] = await Promise.all(
     ["african fashion boutique", "african woman tailor", "african market clothes", "african woman smartphone"].map((q) => searchPhotos(q).catch(() => [])),
   );
+  const fake = { source: "pexels" as const, id: 1, alt: "Essai", photographer: "Essai", photographerUrl: "https://example.com", pageUrl: "https://example.com", src: "/opengraph-image.png" };
+  if (sp.photo === "1") for (const list of [cover, projet, marche, marketing]) if (list.length === 0) list.push(fake);
   const a = defaultAssumptions(new Date("2026-11-23T12:00:00Z"));
   const input = {
     doc: { ...DOC, photos: Object.fromEntries(Object.entries({ couverture: cover[0], projet: projet[0], marche: marche[0], marketing: marketing[0] }).filter(([, v]) => v)) },

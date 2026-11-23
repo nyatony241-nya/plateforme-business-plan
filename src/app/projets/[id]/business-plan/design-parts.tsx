@@ -558,8 +558,8 @@ export function Cover({ d, v }: { d: PlanDesign; v: CoverView }) {
           <svg aria-hidden viewBox="0 0 200 200" className="pointer-events-none absolute -top-16 -right-14 size-72">
             <path d="M44 -6C80 -20 132 4 160 34S206 116 176 152 82 196 46 166 -6 92 6 52 10 8 44 -6Z" fill={d.highlight} fillOpacity="0.22" />
           </svg>
-          <svg aria-hidden viewBox="0 0 200 200" className="pointer-events-none absolute -bottom-20 -left-16 size-80">
-            <path d="M52 10C96 -4 150 22 172 62S188 150 144 178 52 196 24 152 8 24 52 10Z" fill={d.primary} fillOpacity="0.1" />
+          <svg aria-hidden viewBox="0 0 200 200" className="pointer-events-none absolute top-1/4 -left-28 size-64">
+            <path d="M52 10C96 -4 150 22 172 62S188 150 144 178 52 196 24 152 8 24 52 10Z" fill={d.primary} fillOpacity="0.08" />
           </svg>
           <div className="relative grid gap-8 sm:grid-cols-[1.1fr_1fr] sm:items-center print:grid-cols-[1.1fr_1fr] print:items-center">
             <div>
