@@ -430,7 +430,7 @@ export async function businessPlanDocx(input: PlanViewInput, design: PlanDesign 
       (d) =>
         new Paragraph({ numbering: { reference: "etapes", level: 0 }, spacing: { after: 60 }, children: [new TextRun(d)] }),
     ),
-    p("ℹ️ Frais, délais et pièces à confirmer auprès de l'ANPI-Gabon.", { size: 18, color: MUTED }),
+    p(`ℹ️ Frais, délais et pièces à confirmer auprès de ${v.agency}.`, { size: 18, color: MUTED }),
 
     h2(9, t),
     ...prose(doc.conclusion),

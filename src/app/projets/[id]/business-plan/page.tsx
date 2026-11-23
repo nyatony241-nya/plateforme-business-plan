@@ -13,7 +13,7 @@ import { getCreationSummary } from "@/lib/data/creation";
 import { getCreditBalance, getCreditPacks, isPlanUnlocked } from "@/lib/data/credits";
 import { formatXaf } from "@/lib/format";
 import { previewDocument } from "@/lib/plan-preview";
-import {
+import { creationAgencyOf,
   getAssumptions,
   getMyProject,
   getPlanDocument,
@@ -196,6 +196,7 @@ export default async function BusinessPlanPage({
                         district: project.district,
                         city: project.city?.name ?? null,
                         country: project.country?.name ?? "Gabon",
+                        creationAgency: creationAgencyOf(project),
                       }}
                       minimumWage={minimumWage}
                 creation={creation}

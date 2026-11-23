@@ -116,7 +116,7 @@ export default async function ProjectPage({ params }: PageProps<"/projets/[id]">
           <span>
             <span className="block font-display text-2xl font-semibold text-ink">🏛️ Créer mon entreprise</span>
             <span className="mt-1 block text-ink-soft">
-              Forme juridique conseillée, étapes à l&apos;ANPI, pièces, frais et contacts officiels.
+              Forme juridique conseillée, étapes, pièces, frais et contacts officiels.
             </span>
           </span>
           <span className="inline-flex shrink-0 items-center justify-center rounded-xl border border-line-strong px-5 py-3 text-[0.95rem] font-semibold text-brand">

@@ -143,6 +143,7 @@ export default async function FinancialPlanPage({ params }: PageProps<"/projets/
                 initialSavedAt={saved.updatedAt}
                 params={country.params}
                 provenance={country.provenance}
+                countryName={project.country?.name}
                 unlockHref={unlocked ? undefined : `/projets/${id}/business-plan`}
               />
             </div>

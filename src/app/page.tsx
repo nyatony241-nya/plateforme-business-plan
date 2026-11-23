@@ -30,6 +30,7 @@ const NAV = [
   { id: "solution", label: "La solution" },
   { id: "chiffres", label: "Les chiffres" },
   { id: "contenu", label: "Votre plan" },
+  { id: "pays", label: "Pays" },
   { id: "tarifs", label: "Tarifs" },
   { id: "questions", label: "Questions" },
 ];
@@ -41,7 +42,7 @@ const PROBLEMS = [
   },
   {
     title: "Un modèle trouvé en ligne",
-    text: "Des chiffres venus d'ailleurs : rien sur les loyers, les salaires ou les impôts de Libreville.",
+    text: "Des chiffres venus d'ailleurs : rien sur les loyers, les salaires ou les impôts de votre ville.",
   },
   {
     title: "Le faire seul",
@@ -83,7 +84,7 @@ const FAQ = [
   },
   {
     q: "D'où viennent les chiffres ?",
-    a: "Des tarifs officiels (ANPI, impôts du Gabon) et de repères relevés localement (loyers, salaires, électricité), chacun avec sa source et sa date. Ce qui reste une hypothèse est signalé comme tel.",
+    a: "Des règles fiscales et sociales de votre pays et de repères relevés localement (loyers, salaires, électricité), chacun avec sa source et sa date. Ce qui reste une hypothèse est signalé comme tel.",
   },
   {
     q: "Le plan est-il accepté par les banques ?",
@@ -167,7 +168,7 @@ export default async function HomePage() {
           <div className="mx-auto grid w-full max-w-6xl gap-10 px-5 pb-16 pt-10 sm:px-8 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:pb-24 lg:pt-16">
             <div>
               <Eyebrow>
-                Pilote au {brand.pilot.country} · {brand.pilot.cities.join(", ")}
+                Disponible dans {brand.markets.length} pays d&apos;Afrique francophone
               </Eyebrow>
               <h1 className="mt-5 font-display text-[2.6rem] font-medium leading-[1.05] tracking-tight text-ink sm:text-[3.6rem]">
                 Votre idée devient un <span className="text-brand">business plan</span> prêt pour la banque.
@@ -314,7 +315,7 @@ export default async function HomePage() {
               <Eyebrow>Moteur financier</Eyebrow>
               <Title before="Des chiffres" highlight="qui tiennent" />
               <p className="mt-5 leading-relaxed text-ink-soft">
-                Ventes, charges, impôts du Gabon, argent en caisse mois par mois : tout est calculé par un moteur
+                Ventes, charges, impôts de votre pays, argent en caisse mois par mois : tout est calculé par un moteur
                 financier, en trois scénarios (prudent, réaliste, optimiste). L&apos;intelligence artificielle rédige ;
                 elle ne calcule jamais.
               </p>
@@ -400,6 +401,35 @@ export default async function HomePage() {
                 </li>
               ))}
             </ul>
+          </div>
+        </section>
+
+        {/* Pays couverts */}
+        <section id="pays" className="scroll-mt-20 border-b border-line">
+          <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 lg:py-20">
+            <div className="max-w-2xl">
+              <Eyebrow>Zone franc CFA</Eyebrow>
+              <Title before={`${brand.markets.length} pays,`} highlight="un seul prix" />
+              <p className="mt-4 leading-relaxed text-ink-soft">
+                Impôts, cotisations sociales et salaire minimum de chaque pays, avec leur source. Écrivez simplement
+                « un salon de coiffure à Abidjan » ou « une boulangerie à Port-Gentil » : le bon pays est choisi pour vous.
+              </p>
+            </div>
+            <ul className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              {brand.markets.map((m, i) => (
+                <li
+                  key={m.name}
+                  className={`rounded-2xl border p-4 ${i === 0 ? "border-brand bg-brand-50" : "border-line bg-surface"}`}
+                >
+                  <p className="text-3xl" aria-hidden>
+                    {m.flag}
+                  </p>
+                  <p className="mt-2 font-display font-semibold text-ink">{m.name}</p>
+                  <p className="mt-0.5 text-xs leading-snug text-muted">{m.cities}</p>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-5 text-sm text-muted">Les autres pays d&apos;Afrique arrivent ensuite.</p>
           </div>
         </section>
 
@@ -497,7 +527,7 @@ export default async function HomePage() {
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-5 py-8 text-sm text-muted sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:pb-24">
           <BrandLink />
           <span>
-            {brand.tagline} · Pilote : {brand.pilot.cities.join(", ")} ({brand.pilot.country})
+            {brand.tagline} · {brand.markets.map((m) => m.name).join(", ")}
           </span>
         </div>
       </footer>

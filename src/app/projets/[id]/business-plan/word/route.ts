@@ -5,7 +5,7 @@ import { isCompleteDocument, planDocumentSchema } from "@/lib/business-plan";
 import { getCountryParams } from "@/lib/data/country-params";
 import { getCreationSummary } from "@/lib/data/creation";
 import { isPlanUnlocked } from "@/lib/data/credits";
-import { getAssumptions, getMyProject, getPlanDocument } from "@/lib/data/projects";
+import { creationAgencyOf, getAssumptions, getMyProject, getPlanDocument } from "@/lib/data/projects";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { getPlanDesign } from "@/lib/plan-designs";
 import { businessPlanDocx } from "@/lib/word/business-plan-docx";
@@ -64,6 +64,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/projets/[id]/bu
       district: project.district,
       city: project.city?.name ?? null,
       country: project.country?.name ?? "Gabon",
+      creationAgency: creationAgencyOf(project),
     },
     minimumWage: country.provenance.find((p) => p.code === "revenu_minimum_mensuel")?.value ?? 150_000,
     creation,

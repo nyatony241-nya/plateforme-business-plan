@@ -6,8 +6,17 @@
 export const brand = {
   name: process.env.NEXT_PUBLIC_BRAND_NAME?.trim() || "AfriBiz",
   tagline: "De l'idée à l'entreprise rentable",
-  pilot: {
-    country: "Gabon",
-    cities: ["Libreville", "Akanda", "Owendo"],
-  },
+  /** Les 10 marchés ouverts (zone franc CFA), dans l'ordre d'affichage. */
+  markets: [
+    { flag: "🇬🇦", name: "Gabon", cities: "Libreville, Port-Gentil, Franceville" },
+    { flag: "🇨🇮", name: "Côte d'Ivoire", cities: "Abidjan, Bouaké, San-Pédro" },
+    { flag: "🇨🇲", name: "Cameroun", cities: "Douala, Yaoundé, Bafoussam" },
+    { flag: "🇸🇳", name: "Sénégal", cities: "Dakar, Thiès, Touba" },
+    { flag: "🇹🇬", name: "Togo", cities: "Lomé, Kara, Kpalimé" },
+    { flag: "🇨🇬", name: "Congo", cities: "Brazzaville, Pointe-Noire" },
+    { flag: "🇧🇯", name: "Bénin", cities: "Cotonou, Porto-Novo, Parakou" },
+    { flag: "🇧🇫", name: "Burkina Faso", cities: "Ouagadougou, Bobo-Dioulasso" },
+    { flag: "🇲🇱", name: "Mali", cities: "Bamako, Sikasso, Ségou" },
+    { flag: "🇳🇪", name: "Niger", cities: "Niamey, Zinder, Maradi" },
+  ],
 } as const;

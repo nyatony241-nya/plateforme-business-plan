@@ -93,7 +93,9 @@ export function PlanEditor({
   params,
   provenance,
   unlockHref,
+  countryName = "Gabon",
 }: {
+  countryName?: string;
   projectId: string;
   initial: Assumptions;
   initialSavedAt: string | null;
@@ -392,7 +394,7 @@ export function PlanEditor({
 
         <details className="rounded-2xl border border-line bg-surface px-5 py-4">
           <summary className="cursor-pointer text-sm font-semibold text-brand">
-            Impôts et cotisations appliqués (Gabon)
+            Impôts et cotisations appliqués ({countryName})
           </summary>
           <p className="mt-2 text-sm text-ink-soft">
             Valeurs du référentiel, avec leur source. Une estimation reste à confirmer auprès de l&apos;administration.

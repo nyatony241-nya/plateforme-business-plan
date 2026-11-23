@@ -135,9 +135,9 @@ export const FUNNEL_STEPS = [
   { letter: "A", title: "Vous décrivez votre idée", text: "Avec vos mots, sans aucun chiffre à saisir." },
   { letter: "B", title: "L'assistant comprend le projet", text: "Activité, clients, quartier, budget : il ne demande que l'essentiel." },
   { letter: "C", title: "Des chiffres de votre ville", text: "Loyers, salaires, électricité relevés localement, avec leur source." },
-  { letter: "D", title: "Des calculs fiables", text: "Un moteur financier calcule tout : impôts du Gabon, trésorerie, 3 scénarios." },
+  { letter: "D", title: "Des calculs fiables", text: "Un moteur financier calcule tout : impôts de votre pays, trésorerie, 3 scénarios." },
   { letter: "E", title: "Un plan rédigé et illustré", text: "9 parties, photos adaptées à votre activité, prêt à imprimer." },
-  { letter: "F", title: "Les démarches officielles", text: "Forme juridique, pièces, frais et délais de l'ANPI." },
+  { letter: "F", title: "Les démarches officielles", text: "Forme juridique, étapes et organisme officiel de votre pays." },
 ] as const;
 
 const FUNNEL_WIDTHS = [280, 236, 196, 160, 128, 98, 72];

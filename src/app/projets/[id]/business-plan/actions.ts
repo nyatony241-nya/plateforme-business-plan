@@ -14,6 +14,7 @@ import { getCountryParams } from "@/lib/data/country-params";
 import { isPlanUnlocked, unlockPlan } from "@/lib/data/credits";
 import {
   countMyAiRunsSince,
+  creationAgencyOf,
   getAssumptions,
   getMyProject,
   getPlanDocument,
@@ -38,6 +39,7 @@ const REST_SLOTS: PhotoSlot[] = ["marche", "marketing"];
 const contextOf = (project: Project): ProjectContext => ({
   name: project.name,
   countryName: project.country?.name ?? "Gabon",
+  creationAgency: creationAgencyOf(project),
   city: project.city?.name ?? null,
   district: project.district,
   sector: project.sector,

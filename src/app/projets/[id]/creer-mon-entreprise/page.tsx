@@ -7,9 +7,10 @@ import { computeScenarios } from "@/engine";
 import { assumptionsSchema, toPlanInput } from "@/lib/assumptions";
 import { getCountryParams } from "@/lib/data/country-params";
 import { getCreationGuide } from "@/lib/data/creation";
-import { getAssumptions, getMyProject } from "@/lib/data/projects";
+import { creationAgencyOf, getAssumptions, getMyProject } from "@/lib/data/projects";
 import { isSupabaseConfigured } from "@/lib/env";
 import { getCurrentUser } from "@/lib/supabase/server";
+import { GenericCreationGuide } from "./generic-guide";
 import { CreationGuideView } from "./guide-view";
 
 export const metadata: Metadata = { title: "Créer mon entreprise" };
@@ -51,12 +52,22 @@ export default async function CreateCompanyPage({ params }: PageProps<"/projets/
     <>
       <AppHeader name={(user.user_metadata?.full_name as string | undefined) ?? user.email} />
       <main className="mx-auto w-full max-w-3xl flex-1 px-5 py-8 sm:px-8">
-        <CreationGuideView
-          project={{ id, name: project.name, staffing: project.staffing, budget: project.budget }}
-          guide={guide}
-          provenance={country.provenance}
-          revenue1={revenue1}
-        />
+        {guide.procedures.length > 0 ? (
+          <CreationGuideView
+            project={{ id, name: project.name, staffing: project.staffing, budget: project.budget }}
+            guide={guide}
+            provenance={country.provenance}
+            revenue1={revenue1}
+          />
+        ) : (
+          <GenericCreationGuide
+            project={{ id, name: project.name, staffing: project.staffing, budget: project.budget }}
+            country={project.country?.name ?? ""}
+            agency={creationAgencyOf(project)}
+            agencyUrl={project.country?.creation_agency_url ?? null}
+            provenance={country.provenance}
+          />
+        )}
       </main>
     </>
   );

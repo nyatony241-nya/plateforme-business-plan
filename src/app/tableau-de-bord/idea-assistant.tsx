@@ -6,7 +6,7 @@ import { BUDGET_OPTIONS, MODE_OPTIONS, STAFFING_OPTIONS } from "@/lib/project-op
 import { initialFormState } from "@/lib/validation";
 import { analyzeIdeaAction, createFromAssistant, type AnalysisState } from "./actions";
 
-type City = { id: string; name: string };
+type City = { id: string; name: string; countryName: string };
 
 const EXAMPLE =
   "Ex. : Je veux ouvrir une petite boutique de chaussettes à Akanda. Je serai seul au début, j'ai environ 2 millions.";
@@ -83,14 +83,20 @@ export function IdeaAssistant({
       key: "cityId",
       found: Boolean(a!.cityId),
       field: (
-        <Field key="cityId" as="select" label="Ville" name="cityId" defaultValue={v.cityId ?? a!.cityId ?? ""} error={e.cityId} required>
+        <Field key="cityId" as="select" label="Ville et pays" name="cityId" defaultValue={v.cityId ?? a!.cityId ?? ""} error={e.cityId} required>
           <option value="" disabled>
             Choisir
           </option>
-          {cities.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
+          {[...new Set(cities.map((c) => c.countryName))].map((country) => (
+            <optgroup key={country} label={country}>
+              {cities
+                .filter((c) => c.countryName === country)
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+            </optgroup>
           ))}
         </Field>
       ),

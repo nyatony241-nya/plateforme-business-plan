@@ -5,7 +5,7 @@ import { AppHeader } from "@/components/app-header";
 import { ConfigNotice } from "@/components/config-notice";
 import { Card } from "@/components/ui";
 import { isAdmin } from "@/lib/data/admin";
-import { listMyProjects, listPilotCities } from "@/lib/data/projects";
+import { listMyProjects, listCities } from "@/lib/data/projects";
 import { formatDateFr } from "@/lib/data-status";
 import { isSupabaseConfigured } from "@/lib/env";
 import { getCurrentUser } from "@/lib/supabase/server";
@@ -30,7 +30,7 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/connexion?suite=/tableau-de-bord");
 
-  const [projects, cities] = await Promise.all([listMyProjects(), listPilotCities()]);
+  const [projects, cities] = await Promise.all([listMyProjects(), listCities()]);
   const fullName = (user.user_metadata?.full_name as string | undefined) ?? user.email;
 
   return (

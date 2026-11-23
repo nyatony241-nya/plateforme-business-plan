@@ -8,7 +8,7 @@ import {
   countMyAiRunsSince,
   getMyProject,
   insertProject,
-  listPilotCities,
+  listCities,
   logAiRun,
   updateProjectContext,
 } from "@/lib/data/projects";
@@ -36,7 +36,7 @@ export async function analyzeIdeaAction(_prev: AnalysisState, formData: FormData
     return { ok: false, idea, message: "Limite d'analyses atteinte pour aujourd'hui. Réessayez demain." };
   }
 
-  const cities = await listPilotCities();
+  const cities = await listCities();
   const started = Date.now();
   try {
     const result = await analyzeIdea(idea, cities);

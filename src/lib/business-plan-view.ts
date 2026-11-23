@@ -42,7 +42,15 @@ export type PlanViewInput = {
   doc: PlanDocument;
   a: Assumptions;
   results: Record<ScenarioId, PlanResult>;
-  project: { name: string; sector: string | null; district: string | null; city: string | null; country: string };
+  project: {
+    name: string;
+    sector: string | null;
+    district: string | null;
+    city: string | null;
+    country: string;
+    /** Organisme officiel de création d'entreprise (« l'ANPI-Gabon », « le CEPICI (guichet unique) »…). */
+    creationAgency?: string;
+  };
   minimumWage: number;
   /** Démarches officielles (module « Créer mon entreprise »), quand elles existent pour le pays. */
   creation?: { form: string; fee: number | null; delay: string | null; website: string | null; phone: string | null };
@@ -102,6 +110,7 @@ export function buildPlanView({ doc, a, results, project, minimumWage, creation 
   const references = (a.generation?.references ?? []).map((r) => ({ text: r.text, source: r.source }));
 
   return {
+    agency: project.creationAgency ?? "le guichet unique de création d'entreprise",
     title: project.name,
     breakdownLine,
     references,
@@ -145,7 +154,7 @@ export function buildPlanView({ doc, a, results, project, minimumWage, creation 
       ? [
           `Forme juridique conseillée : ${creation.form}.`,
           creation.fee !== null
-            ? `Frais de création à l'ANPI : ${formatXaf(creation.fee)} (tarif officiel de l'ANPI).`
+            ? `Frais de création : ${formatXaf(creation.fee)} (tarif officiel de ${project.creationAgency ?? "l'organisme de création"}).`
             : null,
           creation.delay ? `Délai indicatif : ${creation.delay}.` : null,
           creation.website

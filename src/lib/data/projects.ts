@@ -3,7 +3,13 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import type { NewProjectInput, ProjectContextInput } from "@/lib/validation";
 
-export type City = { id: string; name: string; region: string | null };
+export type City = {
+  id: string;
+  name: string;
+  region: string | null;
+  countryCode: string;
+  countryName: string;
+};
 
 export type ProjectSummary = {
   id: string;
@@ -23,23 +29,45 @@ export type Project = ProjectSummary & {
   mode: "local" | "en_ligne" | "mixte" | null;
   staffing: "seul" | "recruter" | null;
   plan_design: string;
-  country: { name: string } | null;
+  country: { name: string; creation_agency: string | null; creation_agency_url: string | null } | null;
 };
+
+/** Organisme de création d'entreprise du pays du projet, pour les textes (« auprès de … »). */
+export function creationAgencyOf(project: Pick<Project, "country">): string {
+  return project.country?.creation_agency ?? "le guichet unique de création d'entreprise";
+}
 
 const SUMMARY_COLUMNS =
   "id, name, sector, district, status, created_at, updated_at, city:cities(name)";
 
-/** Villes ouvertes du pays pilote, dans l'ordre alphabétique. */
-export async function listPilotCities(countryCode = "GA"): Promise<City[]> {
+/** Villes proposées : celles des pays ouverts, pays par pays (Gabon d'abord), puis par ordre alphabétique. */
+export async function listCities(): Promise<City[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("cities")
-    .select("id, name, region")
-    .eq("country_code", countryCode)
+    .select("id, name, region, country_code, country:countries!inner(name, priority, is_active)")
     .eq("is_pilot", true)
-    .order("name");
+    .eq("country.is_active", true);
   if (error) throw new Error(`Lecture des villes impossible : ${error.message}`);
-  return data ?? [];
+  type Row = {
+    id: string;
+    name: string;
+    region: string | null;
+    country_code: string;
+    country: { name: string; priority: number | null };
+  };
+  return ((data ?? []) as unknown as Row[])
+    .sort(
+      (a, b) =>
+        (a.country.priority ?? 99) - (b.country.priority ?? 99) || a.name.localeCompare(b.name, "fr"),
+    )
+    .map((r) => ({
+      id: r.id,
+      name: r.name,
+      region: r.region,
+      countryCode: r.country_code,
+      countryName: r.country.name,
+    }));
 }
 
 /** Projets de l'utilisateur connecté (la sécurité au niveau des lignes filtre le reste). */
@@ -58,7 +86,9 @@ export async function getMyProject(id: string): Promise<Project | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("projects")
-    .select(`${SUMMARY_COLUMNS}, idea, country_code, budget, mode, staffing, plan_design, country:countries(name)`)
+    .select(
+      `${SUMMARY_COLUMNS}, idea, country_code, budget, mode, staffing, plan_design, country:countries(name, creation_agency, creation_agency_url)`,
+    )
     .eq("id", id)
     .maybeSingle<Project>();
   if (error) throw new Error(`Lecture du projet impossible : ${error.message}`);
@@ -91,6 +121,12 @@ export async function upsertAssumptions(projectId: string, data: unknown): Promi
 
 export async function insertProject(input: NewProjectInput): Promise<string> {
   const supabase = await createClient();
+  const { data: city, error: cityError } = await supabase
+    .from("cities")
+    .select("country_code")
+    .eq("id", input.cityId)
+    .single();
+  if (cityError || !city) throw new Error("Ville inconnue.");
   const { data, error } = await supabase
     .from("projects")
     .insert({
@@ -99,7 +135,7 @@ export async function insertProject(input: NewProjectInput): Promise<string> {
       district: input.district ?? null,
       sector: input.sector ?? null,
       idea: input.idea ?? null,
-      country_code: "GA",
+      country_code: city.country_code as string,
     })
     .select("id")
     .single();

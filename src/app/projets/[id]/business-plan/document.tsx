@@ -513,7 +513,7 @@ export function PlanDocumentView(input: PlanViewInput & { preview?: boolean; pen
             <li key={d}>{d}</li>
           ))}
         </ol>
-        <p className="text-sm text-muted">ℹ️ Frais, délais et pièces à confirmer auprès de l&apos;ANPI-Gabon.</p>
+        <p className="text-sm text-muted">ℹ️ Frais, délais et pièces à confirmer auprès de {v.agency}.</p>
       </Section>
 
       <Section n={9} heading={d.heading}>

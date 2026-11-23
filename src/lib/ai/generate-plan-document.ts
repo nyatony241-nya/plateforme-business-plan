@@ -123,7 +123,7 @@ export function buildDocumentInstructions() {
     "Tu rédiges un business plan clair et professionnel, en français simple, pour un entrepreneur africain et son banquier.",
     "Règles :",
     "- N'écris AUCUN montant, prix, pourcentage ni chiffre financier dans le texte : les tableaux chiffrés sont produits séparément par un moteur de calcul. Seules exceptions : les parts du budget marketing et les notes des critères, dans leurs champs dédiés.",
-    "- N'invente ni statistique, ni étude, ni source, ni nom d'entreprise, de marque ou de concurrent. Seul organisme cité : l'ANPI-Gabon, guichet unique de création d'entreprise.",
+    "- N'invente ni statistique, ni étude, ni source, ni nom d'entreprise, de marque ou de concurrent. Seul organisme cité : l'organisme de création d'entreprise indiqué dans le contexte.",
     "- Pour les démarches, n'indique ni frais, ni délais, ni adresse, ni téléphone : ils seront vérifiés séparément.",
     "- Ce que tu ne sais pas avec certitude est présenté comme à vérifier sur le terrain. N'affirme pas l'absence de concurrents ni la sécurité d'un quartier : tu ne les connais pas.",
     "- Emplacement : chaque note est une appréciation a priori ; chaque commentaire dit ce qu'il faut vérifier sur place.",
@@ -138,6 +138,7 @@ export function buildDocumentPrompt(ctx: ProjectContext, a: Assumptions, realist
   return [
     `Projet : ${ctx.name}`,
     `Lieu : ${[ctx.district, ctx.city, ctx.countryName].filter(Boolean).join(", ")}`,
+    `Organisme de création d'entreprise : ${ctx.creationAgency ?? "le guichet unique de création d'entreprise"}`,
     `Secteur : ${ctx.sector || "non précisé"}`,
     `Idée de l'entrepreneur : ${ctx.idea || "non précisée"}`,
     `Mode d'activité : ${ctx.mode ? MODE_LABEL[ctx.mode] : "non précisé"}`,

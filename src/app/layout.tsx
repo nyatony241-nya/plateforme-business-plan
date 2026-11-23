@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     template: `%s · ${brand.name}`,
   },
   description:
-    "Business plans fondés sur les réalités économiques locales : chiffres sourcés, calculs fiables, démarches officielles. Pilote au Gabon.",
+    "Business plans fondés sur les réalités économiques locales : chiffres sourcés, calculs fiables, démarches officielles. Disponible dans 10 pays d'Afrique francophone.",
 };
 
 export const viewport: Viewport = {

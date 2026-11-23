@@ -38,7 +38,7 @@ describe("consignes de rédaction", () => {
     const text = buildDocumentInstructions();
     expect(text).toContain("AUCUN montant");
     expect(text).toContain("N'invente ni statistique");
-    expect(text).toContain("ANPI-Gabon");
+    expect(text).toContain("organisme de création d'entreprise indiqué dans le contexte");
   });
 
   it("décrivent le modèle sans transmettre de montant", () => {

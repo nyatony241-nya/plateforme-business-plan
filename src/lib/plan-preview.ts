@@ -15,7 +15,7 @@ export const LOCKED_CONTENTS: Record<number, string[]> = {
   ],
   6: ["Canaux et budget publicitaire", "Calendrier des 90 premiers jours"],
   7: ["Principaux risques et parades"],
-  8: ["Forme juridique conseillée", "Étapes, pièces et frais officiels de l'ANPI"],
+  8: ["Forme juridique conseillée", "Étapes, pièces et frais de création"],
   9: ["Synthèse et prochaines étapes"],
 };
 

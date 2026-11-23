@@ -1,6 +1,6 @@
 /**
  * Types du moteur financier.
- * Tous les montants sont en francs CFA (XAF), hors taxes, en nombres entiers.
+ * Tous les montants sont en francs CFA (XAF ou XOF, à parité), hors taxes, en nombres entiers.
  * Les taux sont des fractions : 0,18 = 18 %.
  */
 

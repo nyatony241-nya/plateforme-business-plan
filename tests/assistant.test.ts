@@ -15,6 +15,7 @@ const base: AiIdea = {
   name: "Tchock's",
   sector: "Prêt-à-porter",
   city: "",
+  country: "",
   district: "",
   budget: 0,
   mode: "inconnu",
@@ -22,6 +23,18 @@ const base: AiIdea = {
 };
 
 describe("lecture de l'idée par l'assistant", () => {
+  const AFRIQUE = [
+    { id: "a", name: "Libreville", countryName: "Gabon" },
+    { id: "b", name: "Port-Gentil", countryName: "Gabon" },
+    { id: "c", name: "Abidjan", countryName: "Côte d'Ivoire" },
+    { id: "d", name: "Brazzaville", countryName: "Congo" },
+  ];
+
+  it("reconnaît une ville d'un autre pays, même écrite sans trait d'union", () => {
+    expect(normalizeIdea({ ...base, city: "Abidjan", country: "Côte d'Ivoire" }, AFRIQUE).cityId).toBe("c");
+    expect(normalizeIdea({ ...base, city: "port gentil" }, AFRIQUE).cityId).toBe("b");
+  });
+
   it("reconnaît la ville sans tenir compte des accents ni des majuscules", () => {
     expect(normalizeIdea({ ...base, city: "libreville" }, CITIES).cityId).toBe(CITIES[1].id);
   });

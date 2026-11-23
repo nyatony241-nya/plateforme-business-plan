@@ -1,4 +1,5 @@
 import "server-only";
+import { creationAgencyOf } from "@/lib/data/projects";
 import { usageFromError } from "@/lib/ai/pricing";
 import { recommendLegalForm } from "@/lib/creation-guide";
 import { computeScenarios } from "@/engine";
@@ -44,6 +45,7 @@ export async function generateAndSavePlan(project: Project, context: ProjectCont
       {
         name: project.name,
         countryName: project.country?.name ?? "Gabon",
+        creationAgency: creationAgencyOf(project),
         city: project.city?.name ?? null,
         district: project.district,
         sector: project.sector,

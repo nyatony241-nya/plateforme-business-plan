@@ -21,6 +21,8 @@ export const ASSUMPTIONS_MODEL = DEFAULT_MODEL;
 export type ProjectContext = {
   name: string;
   countryName: string;
+  /** Organisme officiel de création d'entreprise du pays (« le CEPICI (guichet unique) »…). */
+  creationAgency?: string;
   city: string | null;
   district: string | null;
   sector: string | null;
@@ -102,14 +104,14 @@ export function buildInstructions(minimumWage: number) {
     "Règles :",
     "- Montants en francs CFA hors taxes, nombres entiers, adaptés au pays, à la ville et au quartier indiqués.",
     "- Tu n'inventes ni statistique, ni enquête, ni source. Tu ne prétends pas connaître le marché local avec précision. Chaque chiffre est un ordre de grandeur prudent, expliqué simplement dans « rationale ».",
-    "- Ne cite aucun nom d'entreprise, de marque, de fournisseur ou d'organisme, sauf l'ANPI-Gabon : écris « électricité et eau », pas le nom d'un fournisseur.",
+    "- Ne cite aucun nom d'entreprise, de marque, de fournisseur ou d'organisme, sauf l'organisme de création d'entreprise indiqué dans le contexte : écris « électricité et eau », pas le nom d'un fournisseur.",
     "- Préfère la prudence : volumes modestes au démarrage, montée en charge de 3 à 9 mois, coûts complets.",
     "- Prix et coût unitaires portent sur la même unité : pour un pack de 5, le coût est celui des 5 articles. Un produit revendu coûte en général 40 à 70 % de son prix de vente (transport et douane compris s'il est importé) ; jamais moins de 35 %.",
     "- Les volumes restent cohérents avec le budget : le stock et les achats du premier mois doivent pouvoir être payés.",
     `- Aucun salaire brut inférieur à ${minimumWage} FCFA par mois.`,
     "- Si l'entrepreneur travaille seul : aucune ligne de personnel ; sa rémunération viendra du bénéfice.",
     "- Activité en local : prévois loyer, caution, aménagement, électricité. Activité en ligne : pas de local commercial, mais publicité en ligne et livraison.",
-    "- Inclus toujours des frais de création d'entreprise (type frais_creation), marqués à vérifier auprès de l'ANPI-Gabon.",
+    "- Inclus toujours des frais de création d'entreprise (type frais_creation), marqués à vérifier auprès de l'organisme de création d'entreprise indiqué dans le contexte.",
     "- Adapte la taille du projet au budget : l'apport ne dépasse jamais le budget. Si le budget ne couvre pas les investissements et 3 mois de charges, réduis d'abord l'ampleur du projet ; ne propose un prêt bancaire que s'il reste raisonnable, avec un taux indicatif expliqué comme estimation.",
     "- Si le budget n'est pas précisé, dimensionne un projet modeste et signale-le dans les points à vérifier.",
     "- Libellés courts et concrets en français. Explications en français simple, sans jargon.",
@@ -139,6 +141,7 @@ export function buildPrompt(
   const lines = [
     `Projet : ${ctx.name}`,
     `Pays : ${ctx.countryName}`,
+    `Organisme de création d'entreprise : ${ctx.creationAgency ?? "le guichet unique de création d'entreprise"}`,
     `Ville : ${ctx.city ?? "non précisée"}`,
     `Quartier envisagé : ${ctx.district || "non précisé"}`,
     `Secteur : ${ctx.sector || "non précisé"}`,
