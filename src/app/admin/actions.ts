@@ -10,15 +10,10 @@ const packSchema = z.object({
   code: z.string().min(1),
   price_xaf: z.coerce.number().int("Nombre entier.").min(500, "500 FCFA au moins.").max(1_000_000, "Trop élevé."),
   credits: z.coerce.number().int("Nombre entier.").min(1, "1 crédit au moins.").max(100, "100 crédits au plus."),
-  chariow_product_id: z
-    .string()
-    .trim()
-    .max(64)
-    .refine((v) => v === "" || /^[A-Za-z0-9_-]+$/.test(v), "Identifiant invalide."),
   active: z.enum(["on"]).optional(),
 });
 
-/** Modifie le prix, le nombre de crédits ou l'identifiant Chariow d'une formule. */
+/** Modifie le prix ou le nombre de crédits d'une formule, ou la retire de la vente. */
 export async function updatePack(_prev: FormState, formData: FormData): Promise<FormState> {
   if (!(await isAdmin())) return { ok: false, message: "Accès réservé." };
   const values = Object.fromEntries([...formData.entries()].map(([k, v]) => [k, String(v)]));
@@ -31,7 +26,6 @@ export async function updatePack(_prev: FormState, formData: FormData): Promise<
     .update({
       price_xaf: p.price_xaf,
       credits: p.credits,
-      chariow_product_id: p.chariow_product_id || null,
       active: p.active === "on",
     })
     .eq("code", p.code);

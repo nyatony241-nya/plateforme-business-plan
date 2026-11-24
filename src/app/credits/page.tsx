@@ -6,7 +6,7 @@ import { ConfigNotice } from "@/components/config-notice";
 import { isSupabaseConfigured } from "@/lib/env";
 import { getCreditBalance, getCreditPacks, getRecentLedger } from "@/lib/data/credits";
 import { getMyProject } from "@/lib/data/projects";
-import { chariowConfigured } from "@/lib/payments/chariow";
+import { pawapayConfigured } from "@/lib/payments/pawapay";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { BuyForm } from "./buy-form";
@@ -44,9 +44,8 @@ export default async function CreditsPage({ searchParams }: PageProps<"/credits"
     getRecentLedger(),
     projectId ? getMyProject(projectId) : Promise.resolve(null),
   ]);
-  const open = chariowConfigured() && createAdminClient() !== null && packs.some((p) => p.chariow_product_id);
+  const open = pawapayConfigured() && createAdminClient() !== null;
   const fullName = ((user.user_metadata?.full_name as string | undefined) ?? "").trim();
-  const [prenom = "", ...rest] = fullName.split(/\s+/);
 
   return (
     <>
@@ -82,7 +81,7 @@ export default async function CreditsPage({ searchParams }: PageProps<"/credits"
           packs={packs}
           open={open}
           projectId={project?.id}
-          defaults={{ prenom, nom: rest.join(" ") }}
+          country={project?.country_code}
         />
 
         {ledger.length > 0 ? (

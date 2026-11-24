@@ -57,7 +57,6 @@ export type AdminPack = {
   name: string;
   credits: number;
   price_xaf: number;
-  chariow_product_id: string | null;
   active: boolean;
 };
 
@@ -65,7 +64,7 @@ export async function getAllPacks(): Promise<AdminPack[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("credit_packs")
-    .select("code, name, credits, price_xaf, chariow_product_id, active")
+    .select("code, name, credits, price_xaf, active")
     .order("sort_order");
   return (data ?? []) as AdminPack[];
 }

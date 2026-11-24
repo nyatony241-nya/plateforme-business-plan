@@ -5,14 +5,14 @@ import { ConfigNotice } from "@/components/config-notice";
 import { isSupabaseConfigured } from "@/lib/env";
 import { ButtonLink } from "@/components/ui";
 import { unlockPlan } from "@/lib/data/credits";
-import { confirmPayment } from "@/lib/payments/confirm";
+import { settlePayment } from "@/lib/payments/confirm";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Paiement" };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Retour de la page de paiement : la vente est vérifiée chez Chariow avant tout crédit. */
+/** Retour de la page de paiement : le dépôt est relu chez pawaPay avant tout crédit. */
 export default async function PaymentReturnPage({ searchParams }: PageProps<"/credits/retour">) {
   if (!isSupabaseConfigured) {
     return (
@@ -34,15 +34,16 @@ export default async function PaymentReturnPage({ searchParams }: PageProps<"/cr
   const supabase = await createClient();
   const { data: payment } = await supabase
     .from("payments")
-    .select("id, status, provider_ref, credits")
+    .select("id, status, provider, credits")
     .eq("id", paymentId)
     .maybeSingle();
   if (!payment) redirect("/credits");
 
-  let paid = payment.status === "paye";
-  if (!paid && payment.provider_ref) {
-    paid = await confirmPayment(payment.id, payment.provider_ref, true).catch(() => false);
+  let outcome = payment.status === "paye" ? "paid" : payment.status === "echoue" ? "failed" : "pending";
+  if (outcome === "pending" && payment.provider === "pawapay") {
+    outcome = await settlePayment(payment.id).catch(() => "pending" as const);
   }
+  const paid = outcome === "paid";
 
   // Le plan qui attendait ce paiement est débloqué tout de suite.
   if (paid && projectId && (await unlockPlan(projectId).catch(() => false))) {
@@ -63,6 +64,17 @@ export default async function PaymentReturnPage({ searchParams }: PageProps<"/cr
             </p>
             <ButtonLink href="/tableau-de-bord" className="self-start">
               Retour à mes projets
+            </ButtonLink>
+          </>
+        ) : outcome === "failed" ? (
+          <>
+            <h1 className="font-display text-3xl font-semibold text-ink">❌ Paiement non abouti</h1>
+            <p className="text-ink-soft">
+              Le paiement n&apos;a pas été validé. Vérifiez le solde de votre compte mobile money, puis réessayez. Si votre
+              compte a quand même été débité, contactez-nous.
+            </p>
+            <ButtonLink href={`/credits${projectId ? `?projet=${projectId}` : ""}`} className="self-start">
+              Réessayer
             </ButtonLink>
           </>
         ) : (

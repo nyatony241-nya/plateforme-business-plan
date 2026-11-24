@@ -10,18 +10,11 @@ export function PackForm({ pack }: { pack: AdminPack }) {
   const [state, action, pending] = useActionState(updatePack, initialFormState);
   const v = state.values ?? {};
   return (
-    <form action={action} className="grid gap-3 rounded-2xl border border-line bg-surface p-4 sm:grid-cols-[1fr_1fr_1.4fr_auto] sm:items-end">
+    <form action={action} className="grid gap-3 rounded-2xl border border-line bg-surface p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
       <input type="hidden" name="code" value={pack.code} />
-      <p className="font-semibold text-ink sm:col-span-4">{pack.name}</p>
+      <p className="font-semibold text-ink sm:col-span-3">{pack.name}</p>
       <Field label="Prix (FCFA)" name="price_xaf" inputMode="numeric" defaultValue={v.price_xaf ?? String(pack.price_xaf)} error={state.fieldErrors?.price_xaf} />
       <Field label="Crédits" name="credits" inputMode="numeric" defaultValue={v.credits ?? String(pack.credits)} error={state.fieldErrors?.credits} />
-      <Field
-        label="Produit Chariow"
-        name="chariow_product_id"
-        placeholder="prd_…"
-        defaultValue={v.chariow_product_id ?? pack.chariow_product_id ?? ""}
-        error={state.fieldErrors?.chariow_product_id}
-      />
       <div className="flex items-center gap-3 pb-1">
         <label className="flex items-center gap-2 text-sm text-ink-soft">
           <input type="checkbox" name="active" defaultChecked={pack.active} className="size-4 accent-brand" /> En vente
@@ -31,7 +24,7 @@ export function PackForm({ pack }: { pack: AdminPack }) {
         </button>
       </div>
       {state.message ? (
-        <div className="sm:col-span-4">
+        <div className="sm:col-span-3">
           <FormMessage ok={state.ok}>{state.message}</FormMessage>
         </div>
       ) : null}
@@ -51,7 +44,7 @@ export function GrantForm() {
         {pending ? "…" : "Offrir"}
       </button>
       {state.message ? (
-        <div className="sm:col-span-4">
+        <div className="sm:col-span-3">
           <FormMessage ok={state.ok}>{state.message}</FormMessage>
         </div>
       ) : null}

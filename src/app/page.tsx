@@ -22,7 +22,7 @@ import { getCurrentUser } from "@/lib/supabase/server";
 
 /** Offre affichée si la base est injoignable (même valeur que la base au 22/11/2026). */
 const FALLBACK_PACKS: CreditPack[] = [
-  { code: "starter", name: "Business plan complet", credits: 1, price_xaf: 4900, chariow_product_id: null },
+  { code: "starter", name: "Business plan complet", credits: 1, price_xaf: 4900 },
 ];
 
 const NAV = [

@@ -6,7 +6,6 @@ export type CreditPack = {
   name: string;
   credits: number;
   price_xaf: number;
-  chariow_product_id: string | null;
 };
 
 /** Solde de crédits de l'utilisateur connecté. */
@@ -21,7 +20,7 @@ export async function getCreditPacks(): Promise<CreditPack[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("credit_packs")
-    .select("code, name, credits, price_xaf, chariow_product_id")
+    .select("code, name, credits, price_xaf")
     .order("sort_order");
   if (error) throw new Error(`Formules illisibles : ${error.message}`);
   return (data ?? []) as CreditPack[];

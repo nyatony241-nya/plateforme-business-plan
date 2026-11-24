@@ -1,7 +1,6 @@
-import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { SECTIONS } from "@/lib/business-plan-view";
-import { isPaidStatus, normalizeGabonPhone, verifyChariowSignature } from "@/lib/payments/chariow-utils";
+import { PAWAPAY_COUNTRIES, depositOutcome, isPawapayCountry } from "@/lib/payments/pawapay-utils";
 import { LOCKED_CONTENTS, PREVIEW_SECTIONS, previewDocument } from "@/lib/plan-preview";
 import { SAMPLE_DOC } from "./plan-doc-fixture";
 
@@ -26,30 +25,25 @@ describe("aperçu gratuit", () => {
   });
 });
 
-describe("paiement Chariow", () => {
-  const secret = "whsec_test";
-  const body = '{"event":"successful.sale","sale":{"id":"sal_1"}}';
-  const sign = (b: string) => `sha256=${createHmac("sha256", secret).update(b).digest("hex")}`;
-
-  it("accepte un Pulse correctement signé et refuse le reste", () => {
-    expect(verifyChariowSignature(body, sign(body), secret)).toBe(true);
-    expect(verifyChariowSignature(body.replace("sal_1", "sal_2"), sign(body), secret)).toBe(false);
-    expect(verifyChariowSignature(body, null, secret)).toBe(false);
-    expect(verifyChariowSignature(body, sign(body), undefined)).toBe(false);
-    expect(verifyChariowSignature(body, "sha256=zz", secret)).toBe(false);
+describe("paiement pawaPay", () => {
+  it("ne crédite qu'un dépôt terminé, au bon montant et en francs CFA", () => {
+    expect(depositOutcome({ status: "COMPLETED", amount: "4900", currency: "XAF" }, 4900)).toBe("paid");
+    expect(depositOutcome({ status: "COMPLETED", amount: "4900.00", currency: "XOF" }, 4900)).toBe("paid");
+    expect(depositOutcome({ status: "COMPLETED", amount: "100", currency: "XAF" }, 4900)).toBe("failed");
+    expect(depositOutcome({ status: "COMPLETED", amount: "4900", currency: "USD" }, 4900)).toBe("failed");
+    expect(depositOutcome({ status: "FAILED", amount: "4900", currency: "XAF" }, 4900)).toBe("failed");
+    expect(depositOutcome({ status: "ACCEPTED", amount: "4900", currency: "XAF" }, 4900)).toBe("pending");
+    expect(depositOutcome({ status: "PROCESSING" }, 4900)).toBe("pending");
+    expect(depositOutcome(null, 4900)).toBe("pending");
   });
 
-  it("normalise les numéros Mobile Money du Gabon", () => {
-    expect(normalizeGabonPhone("077 12 34 56")).toBe("077123456");
-    expect(normalizeGabonPhone("+241 77 12 34 56")).toBe("77123456");
-    expect(normalizeGabonPhone("00241 066 11 25 60")).toBe("066112560");
-    expect(normalizeGabonPhone("12")).toBeNull();
-  });
-
-  it("ne considère payées que les ventes terminées", () => {
-    expect(isPaidStatus("completed")).toBe(true);
-    expect(isPaidStatus("awaiting_payment")).toBe(false);
-    expect(isPaidStatus(null)).toBe(false);
+  it("couvre le Gabon et paie chaque pays dans sa devise", () => {
+    expect(isPawapayCountry("GA")).toBe(true);
+    expect(PAWAPAY_COUNTRIES.GA).toMatchObject({ iso3: "GAB", currency: "XAF" });
+    expect(PAWAPAY_COUNTRIES.CI).toMatchObject({ iso3: "CIV", currency: "XOF" });
+    expect(isPawapayCountry("TG")).toBe(false);
+    expect(isPawapayCountry("toString")).toBe(false);
+    expect(isPawapayCountry(undefined)).toBe(false);
   });
 });
 

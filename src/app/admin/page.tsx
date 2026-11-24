@@ -159,7 +159,7 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
           {packs.map((p) => (
             <PackForm key={p.code} pack={p} />
           ))}
-          <p className="text-xs text-muted">Le paiement s&apos;ouvre pour une formule dès qu&apos;elle a un identifiant de produit Chariow.</p>
+          <p className="text-xs text-muted">Paiement par pawaPay : ouvert dès que le jeton PAWAPAY_API_TOKEN est ajouté dans Vercel.</p>
         </Section>
 
         <Section title="Offrir des crédits">
