@@ -159,7 +159,7 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
           {packs.map((p) => (
             <PackForm key={p.code} pack={p} />
           ))}
-          <p className="text-xs text-muted">Paiement par pawaPay : ouvert dès que le jeton PAWAPAY_API_TOKEN est ajouté dans Vercel.</p>
+          <p className="text-xs text-muted">Paiement par SasPay (mobile money et carte) : ouvert dès que la clé SASPAY_SECRET_KEY est ajoutée dans Vercel.</p>
         </Section>
 
         <Section title="Offrir des crédits">

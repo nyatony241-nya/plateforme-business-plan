@@ -1,6 +1,7 @@
+import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { SECTIONS } from "@/lib/business-plan-view";
-import { PAWAPAY_COUNTRIES, depositOutcome, isPawapayCountry } from "@/lib/payments/pawapay-utils";
+import { SASPAY_COUNTRIES, isSaspayCountry, sessionOutcome, unwrap, verifySaspaySignature } from "@/lib/payments/saspay-utils";
 import { LOCKED_CONTENTS, PREVIEW_SECTIONS, previewDocument } from "@/lib/plan-preview";
 import { SAMPLE_DOC } from "./plan-doc-fixture";
 
@@ -25,25 +26,50 @@ describe("aperçu gratuit", () => {
   });
 });
 
-describe("paiement pawaPay", () => {
-  it("ne crédite qu'un dépôt terminé, au bon montant et en francs CFA", () => {
-    expect(depositOutcome({ status: "COMPLETED", amount: "4900", currency: "XAF" }, 4900)).toBe("paid");
-    expect(depositOutcome({ status: "COMPLETED", amount: "4900.00", currency: "XOF" }, 4900)).toBe("paid");
-    expect(depositOutcome({ status: "COMPLETED", amount: "100", currency: "XAF" }, 4900)).toBe("failed");
-    expect(depositOutcome({ status: "COMPLETED", amount: "4900", currency: "USD" }, 4900)).toBe("failed");
-    expect(depositOutcome({ status: "FAILED", amount: "4900", currency: "XAF" }, 4900)).toBe("failed");
-    expect(depositOutcome({ status: "ACCEPTED", amount: "4900", currency: "XAF" }, 4900)).toBe("pending");
-    expect(depositOutcome({ status: "PROCESSING" }, 4900)).toBe("pending");
-    expect(depositOutcome(null, 4900)).toBe("pending");
+describe("paiement SasPay", () => {
+  const paymentId = "6f1e2b3a-8c4d-4a2f-9e1b-2d3c4f5a6b7c";
+  const expected = { amount: 4900, paymentId };
+  const paid = { status: "PAID", transaction_status: "SUCCESS" };
+  const detail = { amount: "4900.00", currency: "XAF", metadata: { payment_id: paymentId } };
+
+  it("ne crédite qu'une session payée, au bon montant, en FCFA et pour ce paiement", () => {
+    expect(sessionOutcome(paid, detail, expected)).toBe("paid");
+    expect(sessionOutcome(paid, { ...detail, currency: "XOF" }, expected)).toBe("paid");
+    expect(sessionOutcome(paid, { ...detail, amount: "100.00" }, expected)).toBe("failed");
+    expect(sessionOutcome(paid, { ...detail, currency: "USD" }, expected)).toBe("failed");
+    expect(sessionOutcome(paid, { ...detail, metadata: { payment_id: "autre" } }, expected)).toBe("failed");
+    expect(sessionOutcome({ status: "PENDING", transaction_status: "FAILED" }, null, expected)).toBe("pending");
+    expect(sessionOutcome({ status: "EXPIRED" }, null, expected)).toBe("failed");
+    expect(sessionOutcome(paid, null, expected)).toBe("pending");
+    expect(sessionOutcome(null, null, expected)).toBe("pending");
+  });
+
+  it("accepte un webhook correctement signé et récent, refuse le reste", () => {
+    const secret = "whsec_test";
+    const body = '{"event":"transaction.success","data":{"id":"7c1a"}}';
+    const now = 1_795_000_000_000;
+    const ts = String(now / 1000);
+    const sign = (t: string, b: string) => createHmac("sha256", secret).update(`${t}.${b}`).digest("hex");
+    expect(verifySaspaySignature(body, sign(ts, body), ts, secret, now)).toBe(true);
+    expect(verifySaspaySignature(body.replace("7c1a", "9999"), sign(ts, body), ts, secret, now)).toBe(false);
+    expect(verifySaspaySignature(body, sign(ts, body), ts, secret, now + 600_000)).toBe(false);
+    expect(verifySaspaySignature(body, null, ts, secret, now)).toBe(false);
+    expect(verifySaspaySignature(body, sign(ts, body), ts, undefined, now)).toBe(false);
+    expect(verifySaspaySignature(body, "zz", ts, secret, now)).toBe(false);
+  });
+
+  it("lit les réponses enveloppées ou non, et refuse les erreurs", () => {
+    expect(unwrap({ success: true, data: { id: "a" }, code: 200 })).toEqual({ id: "a" });
+    expect(unwrap({ id: "a" })).toEqual({ id: "a" });
+    expect(unwrap({ success: false, error: { message: "x" } })).toBeNull();
+    expect(unwrap(null)).toBeNull();
   });
 
   it("couvre le Gabon et paie chaque pays dans sa devise", () => {
-    expect(isPawapayCountry("GA")).toBe(true);
-    expect(PAWAPAY_COUNTRIES.GA).toMatchObject({ iso3: "GAB", currency: "XAF" });
-    expect(PAWAPAY_COUNTRIES.CI).toMatchObject({ iso3: "CIV", currency: "XOF" });
-    expect(isPawapayCountry("TG")).toBe(false);
-    expect(isPawapayCountry("toString")).toBe(false);
-    expect(isPawapayCountry(undefined)).toBe(false);
+    expect(SASPAY_COUNTRIES.GA.currency).toBe("XAF");
+    expect(SASPAY_COUNTRIES.CI.currency).toBe("XOF");
+    expect(isSaspayCountry("GA")).toBe(true);
+    expect(isSaspayCountry("toString")).toBe(false);
   });
 });
 
