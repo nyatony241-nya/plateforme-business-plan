@@ -17,12 +17,16 @@ import { SECTIONS } from "@/lib/business-plan-view";
 import { getCreditPacks, type CreditPack } from "@/lib/data/credits";
 import { isSupabaseConfigured } from "@/lib/env";
 import { formatXaf } from "@/lib/format";
+import { bestPerPlan, perPlan, saving } from "@/lib/packs";
 import { PLAN_DESIGNS } from "@/lib/plan-designs";
 import { getCurrentUser } from "@/lib/supabase/server";
 
 /** Offre affichée si la base est injoignable (même valeur que la base au 22/11/2026). */
 const FALLBACK_PACKS: CreditPack[] = [
-  { code: "starter", name: "Business plan complet", credits: 1, price_xaf: 4900 },
+  { code: "starter", name: "1 business plan", credits: 1, price_xaf: 4900 },
+  { code: "pro", name: "3 business plans", credits: 3, price_xaf: 12900 },
+  { code: "pack5", name: "5 business plans", credits: 5, price_xaf: 19900 },
+  { code: "business", name: "10 business plans", credits: 10, price_xaf: 34900 },
 ];
 
 const NAV = [
@@ -409,7 +413,7 @@ export default async function HomePage() {
           <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 lg:py-20">
             <div className="max-w-2xl">
               <Eyebrow>Zone franc CFA</Eyebrow>
-              <Title before={`${brand.markets.length} pays,`} highlight="un seul prix" />
+              <Title before={`${brand.markets.length} pays,`} highlight="les mêmes prix" />
               <p className="mt-4 leading-relaxed text-ink-soft">
                 Impôts, cotisations sociales et salaire minimum de chaque pays, avec leur source. Écrivez simplement
                 « un salon de coiffure à Abidjan » ou « une boulangerie à Port-Gentil » : le bon pays est choisi pour vous.
@@ -437,40 +441,55 @@ export default async function HomePage() {
         <section id="tarifs" className="scroll-mt-20">
           <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 lg:py-24">
             <div className="max-w-2xl">
-              <Eyebrow>Un seul prix, sans abonnement</Eyebrow>
-              <Title before="Un prix" highlight="unique" />
+              <Eyebrow>Sans abonnement</Eyebrow>
+              <Title before="Payez" highlight="par plan" />
               <p className="mt-4 leading-relaxed text-ink-soft">
-                L&apos;aperçu est gratuit. Vous ne payez que si le plan vous convient : le document complet est à vous pour toujours.
+                L&apos;aperçu est gratuit. Vous ne payez que si le plan vous convient, et chaque plan débloqué est à vous
+                pour toujours. Plusieurs projets ? Prenez une formule : chaque plan revient moins cher.
               </p>
             </div>
-            <div className="mt-10 grid gap-5 md:grid-cols-[1fr_1.3fr]">
-              <PriceCard
-                name="Aperçu"
-                audience="Pour découvrir votre plan"
-                price="Gratuit"
-                rows={["Les 3 premières pages", "Résumé, projet et chiffres clés", "Avec filigrane AfriBiz"]}
-                cta={{ href: start.href, label: "Essayer gratuitement" }}
-              />
-              <PriceCard
-                name={plan.name}
-                audience="Un projet, un paiement, sans abonnement"
-                price={formatXaf(plan.price_xaf)}
-                highlight
-                rows={[
-                  "Les 9 parties rédigées et illustrées",
-                  "Plan financier sur 3 ans, 3 scénarios",
-                  "PDF et Word, sans filigrane",
-                  `${PLAN_DESIGNS.length} designs au choix`,
-                  "Démarches de création de votre pays",
-                ]}
-                cta={{ href: user ? "/tableau-de-bord" : "/inscription", label: "Créer mon plan" }}
-              />
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {packs.map((p) => {
+                const off = saving(p, packs);
+                const best = perPlan(p) === bestPerPlan(packs);
+                return (
+                  <PriceCard
+                    key={p.code}
+                    name={p.name}
+                    audience={p.credits > 1 ? `${formatXaf(perPlan(p))} le plan` : "Un projet, un paiement"}
+                    price={formatXaf(p.price_xaf)}
+                    highlight={best && packs.length > 1}
+                    badge={off > 0 ? `Économisez ${off} %` : undefined}
+                    cta={{ href: user ? "/credits" : "/inscription", label: user ? "Choisir" : "Commencer" }}
+                  />
+                );
+              })}
             </div>
+            <ul className="mt-6 grid gap-2 rounded-2xl border border-line bg-surface p-5 text-sm text-ink-soft sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                "Aperçu gratuit des 3 premières pages",
+                "Les 9 parties rédigées, avec analyse SWOT",
+                "Couverture illustrée par IA, à votre nom",
+                "Plan financier sur 3 ans, 3 scénarios",
+                "PDF et Word, sans le marquage AfriBiz",
+                `${PLAN_DESIGNS.length} designs au choix`,
+              ].map((r) => (
+                <li key={r} className="flex gap-2">
+                  <span aria-hidden className="font-bold text-ok">
+                    ✓
+                  </span>
+                  {r}
+                </li>
+              ))}
+            </ul>
             <dl className="mt-8 grid gap-3 rounded-2xl border border-line bg-surface p-5 text-sm sm:grid-cols-3">
               {[
                 ["Consultant", "souvent plusieurs centaines de milliers de FCFA, et des semaines d'attente"],
                 ["Rédacteur indépendant", "en général 10 000 à 60 000 FCFA, sans chiffres locaux"],
-                ["AfriBiz", `${formatXaf(plan.price_xaf)}, prêt en quelques minutes`],
+                [
+                  "AfriBiz",
+                  `${formatXaf(plan.price_xaf)} le plan, et dès ${formatXaf(bestPerPlan(packs) ?? plan.price_xaf)} en formule ; prêt en quelques minutes`,
+                ],
               ].map(([k, v], i) => (
                 <div key={k} className={i === 2 ? "rounded-xl bg-brand-50 p-3" : "p-3"}>
                   <dt className={`font-display font-semibold ${i === 2 ? "text-brand" : "text-ink"}`}>{k}</dt>
@@ -541,7 +560,6 @@ function PriceCard({
   name,
   audience,
   price,
-  rows,
   cta,
   highlight = false,
   badge,
@@ -549,7 +567,6 @@ function PriceCard({
   name: string;
   audience: string;
   price: string;
-  rows: string[];
   cta: { href: string; label: string };
   highlight?: boolean;
   badge?: string;
@@ -561,24 +578,17 @@ function PriceCard({
       }`}
     >
       {highlight ? (
-        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand px-3 py-0.5 text-[11px] font-bold text-white">
-          Recommandé
+        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand px-3 py-0.5 text-[11px] font-bold whitespace-nowrap text-white">
+          Meilleur prix
         </span>
       ) : null}
       <p className="mx-auto rounded-lg border border-line px-4 py-1.5 font-display text-sm font-semibold text-ink">{name}</p>
-      <p className="mt-2 text-xs text-muted">{audience}</p>
-      <ul className="mt-4 divide-y divide-line border-y border-line text-sm text-ink-soft">
-        {rows.map((r) => (
-          <li key={r} className="py-2.5">
-            {r}
-          </li>
-        ))}
-      </ul>
-      <Link href={cta.href} className={buttonClass(highlight ? "primary" : "secondary", "mt-5 w-full py-2.5 text-sm")}>
+      <p className="mt-4 font-display text-3xl font-bold whitespace-nowrap tabular-nums text-ink">{price}</p>
+      <p className="mt-1 text-sm text-ink-soft">{audience}</p>
+      <p className="mt-2 h-5 text-xs font-bold text-ok">{badge ?? ""}</p>
+      <Link href={cta.href} className={buttonClass(highlight ? "primary" : "secondary", "mt-4 w-full py-2.5 text-sm")}>
         {cta.label}
       </Link>
-      <p className="mt-5 font-display text-3xl font-semibold tabular-nums text-ink">{price}</p>
-      <p className="mt-1 h-4 text-xs font-semibold text-ok">{badge ?? ""}</p>
     </div>
   );
 }

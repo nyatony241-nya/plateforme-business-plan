@@ -2,7 +2,7 @@ import { usageFrom } from "@/lib/ai/pricing";
 import "server-only";
 import { generateText, Output } from "ai";
 import { z } from "zod";
-import { DEFAULT_MODEL, resolveModel } from "@/lib/ai/model";
+import { DEFAULT_MODEL, lightThinking, resolveModel } from "@/lib/ai/model";
 import { BUDGET_OPTIONS, type ProjectMode, type ProjectStaffing } from "@/lib/project-options";
 
 /** Ce que l'assistant a compris de l'idée ; null = information absente, à demander. */
@@ -88,6 +88,7 @@ export async function analyzeIdea(idea: string, cities: { id: string; name: stri
     ].join("\n"),
     prompt: `Idée de l'entrepreneur :\n${idea}`,
     output: Output.object({ schema: aiSchema }),
+    providerOptions: lightThinking(),
     maxRetries: 1,
     timeout: 45_000,
   });

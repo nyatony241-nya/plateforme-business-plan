@@ -1,4 +1,5 @@
 import "server-only";
+import { dailyLimit } from "@/lib/data/credits";
 import { creationAgencyOf } from "@/lib/data/projects";
 import { usageFromError } from "@/lib/ai/pricing";
 import { recommendLegalForm } from "@/lib/creation-guide";
@@ -19,11 +20,14 @@ import type { ProjectContextInput } from "@/lib/validation";
 
 export const PLAN_PURPOSE = "hypotheses_plan_financier";
 /** Générations autorisées par utilisateur et par jour (maîtrise des coûts). */
-export const PLAN_DAILY_LIMIT = 10;
+/** Plans financiers générés sur 24 h : 10 pour un compte qui a déjà payé, 3 sinon. */
+export const PLAN_LIMITS = { paid: 10, free: 3 };
 
-export async function planQuotaReached() {
+/** Limite atteinte ? Renvoie la limite en vigueur pour ce compte, ou null si on peut générer. */
+export async function planQuotaReached(): Promise<number | null> {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  return (await countMyAiRunsSince(since, PLAN_PURPOSE)) >= PLAN_DAILY_LIMIT;
+  const limit = await dailyLimit(PLAN_LIMITS);
+  return (await countMyAiRunsSince(since, PLAN_PURPOSE)) >= limit ? limit : null;
 }
 
 /**

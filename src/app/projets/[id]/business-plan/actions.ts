@@ -11,7 +11,7 @@ import { assumptionsSchema, toPlanInput } from "@/lib/assumptions";
 import { isCompleteDocument, planDocumentSchema, type PlanDocument, type PhotoSlot } from "@/lib/business-plan";
 import { recommendLegalForm } from "@/lib/creation-guide";
 import { getCountryParams } from "@/lib/data/country-params";
-import { isPlanUnlocked, unlockPlan } from "@/lib/data/credits";
+import { dailyLimit, isPlanUnlocked, unlockPlan } from "@/lib/data/credits";
 import {
   countMyAiRunsSince,
   creationAgencyOf,
@@ -31,7 +31,8 @@ import type { FormState } from "@/lib/validation";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PURPOSE = "redaction_business_plan";
 const REST_PURPOSE = "redaction_suite";
-const DAILY_LIMIT = 10;
+/** Rédactions sur 24 h : 10 pour un compte qui a déjà payé, 3 sinon (aperçus gratuits). */
+const WRITE_LIMITS = { paid: 10, free: 3 };
 
 /** Photos de l'aperçu : couverture (illustration IA) et projet ; les autres attendent le paiement. */
 const REST_SLOTS: PhotoSlot[] = ["marche", "marketing"];
@@ -92,6 +93,14 @@ async function aiCoverFor(projectId: string, doc: PlanDocument, project: Project
   }
 }
 
+/** Couverture IA déjà créée pour ce projet, tant que son nom n'a pas changé : pas de nouvelle dépense. */
+async function existingAiCover(projectId: string, project: Project) {
+  const saved = await getPlanDocument(projectId);
+  const parsed = saved ? planDocumentSchema.safeParse(saved.data) : null;
+  const cover = parsed?.success ? parsed.data.photos?.couverture : undefined;
+  return cover?.source === "ia" && cover.alt.startsWith(`Illustration de ${project.name},`) ? cover : null;
+}
+
 async function loadInputs(projectId: string) {
   const project = await getMyProject(projectId);
   if (!project) return { error: "Projet introuvable." } as const;
@@ -120,8 +129,9 @@ export async function writeBusinessPlan(projectId: string): Promise<FormState> {
   const { project, a, params } = inputs;
 
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  if ((await countMyAiRunsSince(since, PURPOSE)) >= DAILY_LIMIT) {
-    return { ok: false, message: `Limite de ${DAILY_LIMIT} rédactions sur 24 heures atteinte. Réessayez demain.` };
+  const limit = await dailyLimit(WRITE_LIMITS);
+  if ((await countMyAiRunsSince(since, PURPOSE)) >= limit) {
+    return { ok: false, message: `Limite de ${limit} rédactions sur 24 heures atteinte. Réessayez demain.` };
   }
 
   const full = await isPlanUnlocked(projectId);
@@ -133,8 +143,13 @@ export async function writeBusinessPlan(projectId: string): Promise<FormState> {
       : await generatePlanPreview(contextOf(project), a, realiste);
     const fresh = { ...out.document, photos: {} };
     const others: PhotoSlot[] = full ? ["projet", ...REST_SLOTS] : ["projet"];
-    // Illustration IA et photos des sections en parallèle ; photo libre de droit si l'IA échoue.
-    const [cover, photos] = await Promise.all([aiCoverFor(projectId, fresh, project), photosFor(fresh, project, others)]);
+    // Couverture IA : après paiement seulement (sauf AI_COVER_IN_PREVIEW=on), et réutilisée si elle existe déjà.
+    const wantAi = full || process.env.AI_COVER_IN_PREVIEW?.trim() === "on";
+    const reusable = wantAi ? await existingAiCover(projectId, project) : null;
+    const [cover, photos] = await Promise.all([
+      reusable ?? (wantAi ? aiCoverFor(projectId, fresh, project) : null),
+      photosFor(fresh, project, others),
+    ]);
     const couverture = cover ?? (await photosFor({ ...fresh, photos }, project, ["couverture"])).couverture;
     await upsertPlanDocument(projectId, { ...out.document, photos: { ...photos, ...(couverture ? { couverture } : {}) } });
     await logRun(projectId, PURPOSE, "succes", out.durationMs, out.usage);
@@ -169,8 +184,15 @@ export async function completeBusinessPlan(projectId: string): Promise<FormState
     const realiste = computeScenarios(toPlanInput(a, params)).realiste;
     const out = await generatePlanRest(contextOf(project), a, realiste, doc);
     const complete: PlanDocument = planDocumentSchema.parse({ ...doc, ...out.fields, stage: "complet" });
-    const photos = await photosFor(complete, project, REST_SLOTS);
-    await upsertPlanDocument(projectId, { ...complete, photos: { ...complete.photos, ...photos } });
+    // Après paiement : sections restantes et couverture illustrée par IA (une seule fois par projet).
+    const [photos, cover] = await Promise.all([
+      photosFor(complete, project, REST_SLOTS),
+      complete.photos?.couverture?.source === "ia" ? null : aiCoverFor(projectId, complete, project),
+    ]);
+    await upsertPlanDocument(projectId, {
+      ...complete,
+      photos: { ...complete.photos, ...photos, ...(cover ? { couverture: cover } : {}) },
+    });
     await logRun(projectId, REST_PURPOSE, "succes", out.durationMs, out.usage);
   } catch (error) {
     console.error("Rédaction de la suite impossible", error);

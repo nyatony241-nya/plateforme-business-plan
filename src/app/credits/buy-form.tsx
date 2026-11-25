@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { Field, FormMessage, buttonClass } from "@/components/ui";
 import { formatXaf } from "@/lib/format";
+import { bestPerPlan, perPlan, saving } from "@/lib/packs";
 import { PAWAPAY_COUNTRIES, isPawapayCountry } from "@/lib/payments/pawapay-utils";
 import { initialFormState } from "@/lib/validation";
 import { buyCredits } from "./actions";
@@ -55,25 +56,44 @@ export function BuyForm({
           Le paiement par mobile money ouvre très bientôt.
         </p>
       )}
-      <div className={`grid gap-4 ${packs.length > 1 ? "sm:grid-cols-3" : "max-w-sm"}`}>
-        {packs.map((p) => (
-          <div key={p.code} className="flex flex-col rounded-2xl border border-line bg-surface p-5">
-            <p className="text-sm font-semibold uppercase tracking-[0.12em] text-accent">{p.name}</p>
-            <p className="mt-2 font-display text-3xl font-semibold text-ink">{formatXaf(p.price_xaf)}</p>
-            <p className="mt-1 text-sm text-ink-soft">
-              {p.credits} business plan{p.credits > 1 ? "s" : ""} complet{p.credits > 1 ? "s" : ""}
-            </p>
-            <button
-              type="submit"
-              name="pack"
-              value={p.code}
-              disabled={!open || pending}
-              className={buttonClass("primary", "mt-4 w-full")}
+      <div className={`grid gap-4 ${packs.length > 1 ? "sm:grid-cols-2 lg:grid-cols-4" : "max-w-sm"}`}>
+        {packs.map((p) => {
+          const off = saving(p, packs);
+          const best = packs.length > 1 && perPlan(p) === bestPerPlan(packs);
+          return (
+            <div
+              key={p.code}
+              className={`relative flex flex-col rounded-2xl border bg-surface p-5 ${best ? "border-brand ring-4 ring-brand/10" : "border-line"}`}
             >
-              {pending ? "Ouverture du paiement…" : "Payer par mobile money"}
-            </button>
-          </div>
-        ))}
+              {best ? (
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand px-3 py-0.5 text-[11px] font-bold whitespace-nowrap text-white">
+                  Meilleur prix
+                </span>
+              ) : null}
+              <p className="text-sm font-semibold uppercase tracking-[0.12em] text-accent">{p.name}</p>
+              <p className="mt-2 font-display text-2xl font-bold whitespace-nowrap text-ink">{formatXaf(p.price_xaf)}</p>
+              <p className="mt-1 text-sm text-ink-soft">
+                {p.credits > 1 ? `${formatXaf(perPlan(p))} le plan` : "Un projet, débloqué pour toujours"}
+              </p>
+              {off > 0 ? (
+                <p className="mt-2 self-start rounded-full bg-ok/10 px-2.5 py-0.5 text-xs font-bold text-ok">
+                  Économisez {off} %
+                </p>
+              ) : null}
+              <div className="mt-auto pt-4">
+                <button
+                  type="submit"
+                  name="pack"
+                  value={p.code}
+                  disabled={!open || pending}
+                  className={buttonClass(best ? "primary" : "secondary", "w-full")}
+                >
+                  {pending ? "Ouverture…" : "Payer"}
+                </button>
+              </div>
+            </div>
+          );
+        })}
       </div>
       {open ? (
         <p className="text-xs text-muted">

@@ -12,13 +12,15 @@ import {
   logAiRun,
   updateProjectContext,
 } from "@/lib/data/projects";
+import { dailyLimit } from "@/lib/data/credits";
 import { isSupabaseConfigured } from "@/lib/env";
 import { generateAndSavePlan, planQuotaReached } from "@/lib/generation/plan";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { assistantProjectSchema, formDataToObject, toFieldErrors, type FormState } from "@/lib/validation";
 
 const ANALYSIS_PURPOSE = "analyse_idee";
-const ANALYSIS_DAILY_LIMIT = 30;
+/** Analyses d'idée sur 24 h : 30 pour un compte qui a déjà payé, 10 sinon. */
+const ANALYSIS_LIMITS = { paid: 30, free: 10 };
 
 export type AnalysisState = { ok: boolean; idea: string; analysis?: IdeaAnalysis; message?: string };
 
@@ -32,7 +34,7 @@ export async function analyzeIdeaAction(_prev: AnalysisState, formData: FormData
   if (!user) return { ok: false, idea, message: "Votre session a expiré. Reconnectez-vous." };
 
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  if ((await countMyAiRunsSince(since, ANALYSIS_PURPOSE)) >= ANALYSIS_DAILY_LIMIT) {
+  if ((await countMyAiRunsSince(since, ANALYSIS_PURPOSE)) >= (await dailyLimit(ANALYSIS_LIMITS))) {
     return { ok: false, idea, message: "Limite d'analyses atteinte pour aujourd'hui. Réessayez demain." };
   }
 
@@ -89,7 +91,7 @@ export async function createFromAssistant(_prev: FormState, formData: FormData):
   const context = { budget, mode, staffing };
   await updateProjectContext(id, context);
   const project = await getMyProject(id);
-  if (project && !(await planQuotaReached())) {
+  if (project && (await planQuotaReached()) === null) {
     await generateAndSavePlan(project, context);
     redirect(`/projets/${id}/plan-financier`);
   }

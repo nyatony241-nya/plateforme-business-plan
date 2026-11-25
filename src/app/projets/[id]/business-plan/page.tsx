@@ -12,6 +12,7 @@ import { getCountryParams } from "@/lib/data/country-params";
 import { getCreationSummary } from "@/lib/data/creation";
 import { getCreditBalance, getCreditPacks, isPlanUnlocked } from "@/lib/data/credits";
 import { formatXaf } from "@/lib/format";
+import { bestPerPlan, singlePrice } from "@/lib/packs";
 import { previewDocument } from "@/lib/plan-preview";
 import { creationAgencyOf,
   getAssumptions,
@@ -67,7 +68,8 @@ export default async function BusinessPlanPage({
     getCreditBalance().catch(() => 0),
     getCreditPacks().catch(() => []),
   ]);
-  const fromPrice = packs.length > 0 ? Math.min(...packs.map((p) => p.price_xaf)) : null;
+  const fromPrice = packs.length > 0 ? singlePrice(packs) : null;
+  const packPrice = packs.length > 1 ? bestPerPlan(packs) : null;
   const assumptions = savedAssumptions
     ? assumptionsSchema.safeParse(savedAssumptions.data)
     : null;
@@ -159,7 +161,7 @@ export default async function BusinessPlanPage({
               </div>
             </div>
             ) : pending ? null : (
-              <UnlockPanel projectId={id} balance={balance} fromPrice={fromPrice} />
+              <UnlockPanel projectId={id} balance={balance} fromPrice={fromPrice} packPrice={packPrice} />
             )}
             <DesignPicker projectId={id} current={project.plan_design} />
             {/* Cadre d'impression : marges sur chaque page, sans l'adresse ni la date du navigateur. */}
@@ -207,7 +209,7 @@ export default async function BusinessPlanPage({
             </table>
             {unlocked ? null : (
               <div className="mt-6">
-                <UnlockPanel projectId={id} balance={balance} fromPrice={fromPrice} />
+                <UnlockPanel projectId={id} balance={balance} fromPrice={fromPrice} packPrice={packPrice} />
               </div>
             )}
             <details className="mt-6 rounded-2xl border border-line bg-surface px-5 py-4 print:hidden">
@@ -231,6 +233,7 @@ export default async function BusinessPlanPage({
 
 /** Ce que le plan complet ajoute à l'aperçu gratuit. */
 const UNLOCKED = [
+  "Couverture illustrée par IA, à votre nom",
   "Marché, clientèle et concurrence",
   "Emplacement noté critère par critère",
   "Plan financier sur 3 ans, 3 scénarios",
@@ -246,10 +249,13 @@ function UnlockPanel({
   projectId,
   balance,
   fromPrice,
+  packPrice,
 }: {
   projectId: string;
   balance: number;
   fromPrice: number | null;
+  /** Prix d'un plan dans la formule la plus avantageuse. */
+  packPrice: number | null;
 }) {
   return (
     <section className="mt-4 overflow-hidden rounded-3xl border border-brand/25 bg-surface shadow-[0_18px_40px_-28px_rgba(210,57,12,0.6)] print:hidden">
@@ -285,6 +291,9 @@ function UnlockPanel({
             <>
               {fromPrice ? <p className="font-display text-4xl font-bold text-ink">{formatXaf(fromPrice)}</p> : null}
               <p className="mt-1 text-sm text-ink-soft">pour ce business plan</p>
+              {packPrice && fromPrice && packPrice < fromPrice ? (
+                <p className="mt-1 text-xs font-semibold text-ok">ou dès {formatXaf(packPrice)} le plan en formule</p>
+              ) : null}
               <ButtonLink href={`/credits?projet=${projectId}`} className="mt-4 w-full">
                 🔓 Débloquer maintenant
               </ButtonLink>

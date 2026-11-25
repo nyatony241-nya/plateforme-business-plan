@@ -26,6 +26,21 @@ export async function getCreditPacks(): Promise<CreditPack[]> {
   return (data ?? []) as CreditPack[];
 }
 
+/**
+ * L'utilisateur a-t-il déjà acheté (ou reçu) des crédits ? Les comptes qui n'ont jamais payé
+ * ont des limites plus basses, pour que les aperçus gratuits coûtent peu.
+ */
+export async function hasEverPaid(): Promise<boolean> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("credit_ledger").select("delta").gt("delta", 0).limit(1);
+  return (data?.length ?? 0) > 0;
+}
+
+/** Limite sur 24 heures selon que le compte a déjà payé ou non. */
+export async function dailyLimit(limits: { paid: number; free: number }) {
+  return (await hasEverPaid()) ? limits.paid : limits.free;
+}
+
 /** Le business plan de ce projet a-t-il été débloqué ? */
 export async function isPlanUnlocked(projectId: string): Promise<boolean> {
   const supabase = await createClient();

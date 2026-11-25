@@ -15,3 +15,13 @@ export function resolveModel(id: string) {
   if (id.startsWith("google/") && process.env.GOOGLE_GENERATIVE_AI_API_KEY) return google(id.slice("google/".length));
   return id;
 }
+
+/**
+ * Réflexion réduite pour les étapes gratuites (lecture de l'idée, aperçu) : la réflexion est
+ * facturée comme du texte produit. Réglable par AI_THINKING_FREE (minimal, low, medium, high, off).
+ */
+export function lightThinking() {
+  const level = process.env.AI_THINKING_FREE?.trim() || "low";
+  if (level === "off") return undefined;
+  return { google: { thinkingConfig: { thinkingLevel: level as "minimal" | "low" | "medium" | "high" } } };
+}

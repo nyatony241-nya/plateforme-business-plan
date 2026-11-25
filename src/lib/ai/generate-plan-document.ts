@@ -3,7 +3,7 @@ import { generateText, Output } from "ai";
 import { z } from "zod";
 import type { PlanResult } from "@/engine";
 import { MODE_LABEL, STAFF_LABEL, type ProjectContext } from "@/lib/ai/generate-assumptions";
-import { DEFAULT_MODEL, resolveModel } from "@/lib/ai/model";
+import { DEFAULT_MODEL, lightThinking, resolveModel } from "@/lib/ai/model";
 import { addUsage, usageFrom } from "@/lib/ai/pricing";
 import { INVESTMENT_KINDS, type Assumptions } from "@/lib/assumptions";
 import { CHANNELS, planDocumentSchema, type PlanDocument } from "@/lib/business-plan";
@@ -230,12 +230,13 @@ export function restFields(out: RestOutput) {
   };
 }
 
-async function callAi<T extends z.ZodType>(schema: T, prompt: string, model: string, timeout: number) {
+async function callAi<T extends z.ZodType>(schema: T, prompt: string, model: string, timeout: number, light = false) {
   const result = await generateText({
     model: resolveModel(model),
     instructions: buildDocumentInstructions(),
     prompt,
     output: Output.object({ schema }),
+    providerOptions: light ? lightThinking() : undefined,
     maxRetries: 1,
     timeout,
   });
@@ -253,6 +254,7 @@ export async function generatePlanPreview(ctx: ProjectContext, a: Assumptions, r
     `${buildDocumentPrompt(ctx, a, realiste)}\nRédige seulement le résumé, la présentation du projet et les recherches de photos.`,
     model,
     60_000,
+    true,
   );
   const document: PlanDocument = planDocumentSchema.parse({
     ...previewFields(output),

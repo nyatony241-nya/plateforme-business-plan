@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { getMyProject } from "@/lib/data/projects";
-import { PLAN_DAILY_LIMIT, generateAndSavePlan, planQuotaReached } from "@/lib/generation/plan";
+import { generateAndSavePlan, planQuotaReached } from "@/lib/generation/plan";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { formDataToObject, projectContextSchema, toFieldErrors, type FormState } from "@/lib/validation";
 
@@ -21,11 +21,12 @@ export async function generatePlan(projectId: string, _prev: FormState, formData
   const project = await getMyProject(projectId);
   if (!project) return { ok: false, values, message: "Projet introuvable." };
 
-  if (await planQuotaReached()) {
+  const limit = await planQuotaReached();
+  if (limit !== null) {
     return {
       ok: false,
       values,
-      message: `Vous avez atteint la limite de ${PLAN_DAILY_LIMIT} générations sur 24 heures. Réessayez demain.`,
+      message: `Vous avez atteint la limite de ${limit} générations sur 24 heures. Réessayez demain.`,
     };
   }
 
