@@ -37,3 +37,24 @@ export async function settlePayment(paymentId: string): Promise<DepositOutcome> 
   }
   return outcome;
 }
+
+/**
+ * Revérifie les paiements pawaPay en attente des 2 derniers jours d'un utilisateur :
+ * un client qui ferme la page après avoir payé est quand même crédité.
+ */
+export async function settlePendingPayments(userId: string) {
+  const admin = createAdminClient();
+  if (!admin) return;
+  const { data } = await admin
+    .from("payments")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("provider", "pawapay")
+    .eq("status", "en_attente")
+    .gte("created_at", new Date(Date.now() - 2 * 86_400_000).toISOString())
+    .order("created_at", { ascending: false })
+    .limit(10);
+  for (const p of data ?? []) {
+    await settlePayment(p.id).catch((error) => console.error("Vérification du paiement impossible", p.id, error));
+  }
+}
