@@ -229,7 +229,19 @@ export default async function BusinessPlanPage({
   );
 }
 
-/** Aperçu gratuit : ce qui manque, et comment le débloquer. */
+/** Ce que le plan complet ajoute à l'aperçu gratuit. */
+const UNLOCKED = [
+  "Marché, clientèle et concurrence",
+  "Emplacement noté critère par critère",
+  "Plan financier sur 3 ans, 3 scénarios",
+  "Trésorerie mois par mois",
+  "Marketing et calendrier des 90 premiers jours",
+  "Analyse SWOT, risques et parades",
+  "Démarches de création dans votre pays",
+  "PDF et Word, sans le marquage AfriBiz",
+];
+
+/** Aperçu gratuit : ce que débloque le plan complet, et pour combien. */
 function UnlockPanel({
   projectId,
   balance,
@@ -240,29 +252,47 @@ function UnlockPanel({
   fromPrice: number | null;
 }) {
   return (
-    <section className="mt-4 rounded-2xl border border-brand/30 bg-brand-50 p-5 print:hidden">
-      <p className="font-display text-lg font-semibold text-ink">🔒 Aperçu gratuit : les 3 premières pages</p>
-      <p className="mt-1 text-sm text-ink-soft">
-        Débloquez le business plan complet : marché, emplacement, plan financier détaillé, marketing sur 90 jours,
-        risques et démarches. Sans filigrane, à télécharger en PDF et en Word.
-      </p>
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-        {balance > 0 ? (
-          <form action={unlockPlanAction.bind(null, projectId)}>
-            <button type="submit" className={buttonClass("primary")}>
-              🔓 Débloquer avec 1 crédit
-            </button>
-          </form>
-        ) : (
-          <ButtonLink href={`/credits?projet=${projectId}`}>
-            🔓 Débloquer le plan complet{fromPrice ? ` · ${formatXaf(fromPrice)}` : ""}
-          </ButtonLink>
-        )}
-        <p className="text-sm text-muted">
-          {balance > 0
-            ? `Il vous reste ${balance} crédit${balance > 1 ? "s" : ""}.`
-            : "Paiement unique, sans abonnement. Le plan reste à vous pour toujours."}
-        </p>
+    <section className="mt-4 overflow-hidden rounded-3xl border border-brand/25 bg-surface shadow-[0_18px_40px_-28px_rgba(210,57,12,0.6)] print:hidden">
+      <div className="grid gap-6 p-6 sm:grid-cols-[1.4fr_1fr] sm:p-7">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand">🔒 Aperçu gratuit : 3 pages</p>
+          <h2 className="mt-1 font-display text-2xl font-bold text-ink">Débloquez le plan complet</h2>
+          <ul className="mt-4 grid gap-2 text-sm text-ink">
+            {UNLOCKED.map((item) => (
+              <li key={item} className="flex gap-2">
+                <span aria-hidden className="font-bold text-ok">
+                  ✓
+                </span>
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="flex flex-col justify-center rounded-2xl bg-brand-50 p-5 text-center">
+          {balance > 0 ? (
+            <>
+              <p className="font-display text-3xl font-bold text-ink">1 crédit</p>
+              <p className="mt-1 text-sm text-ink-soft">
+                Il vous reste {balance} crédit{balance > 1 ? "s" : ""}.
+              </p>
+              <form action={unlockPlanAction.bind(null, projectId)} className="mt-4">
+                <button type="submit" className={buttonClass("primary", "w-full")}>
+                  🔓 Débloquer maintenant
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              {fromPrice ? <p className="font-display text-4xl font-bold text-ink">{formatXaf(fromPrice)}</p> : null}
+              <p className="mt-1 text-sm text-ink-soft">pour ce business plan</p>
+              <ButtonLink href={`/credits?projet=${projectId}`} className="mt-4 w-full">
+                🔓 Débloquer maintenant
+              </ButtonLink>
+            </>
+          )}
+          <p className="mt-3 text-xs text-muted">Paiement unique · Sans abonnement · À vous pour toujours</p>
+          <p className="mt-1 text-xs text-muted">📱 Mobile money</p>
+        </div>
       </div>
     </section>
   );

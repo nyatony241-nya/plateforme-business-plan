@@ -14,7 +14,7 @@ export const LOCKED_CONTENTS: Record<number, string[]> = {
     "Argent en caisse, mois par mois",
   ],
   6: ["Canaux et budget publicitaire", "Calendrier des 90 premiers jours"],
-  7: ["Principaux risques et parades"],
+  7: ["Analyse SWOT : forces, faiblesses, opportunités, menaces", "Principaux risques et parades"],
   8: ["Forme juridique conseillée", "Étapes, pièces et frais de création"],
   9: ["Synthèse et prochaines étapes"],
 };
@@ -30,6 +30,7 @@ export function previewDocument(doc: PlanDocument): PlanDocument {
     emplacement: { analyse: "", criteres: [] },
     marketing: { message: "", canaux: [], calendrier: [] },
     risques: [],
+    swot: undefined,
     demarches: [],
     conclusion: "",
     photos: {

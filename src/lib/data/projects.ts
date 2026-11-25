@@ -151,6 +151,8 @@ export async function logAiRun(run: {
   status: "succes" | "echec";
   durationMs: number;
   usage: AiUsage;
+  /** Coût connu directement (images facturées à l'unité). */
+  costUsd?: number | null;
 }) {
   try {
     const supabase = await createClient();
@@ -164,7 +166,7 @@ export async function logAiRun(run: {
       output_tokens: run.usage.outputTokens,
       reasoning_tokens: run.usage.reasoningTokens,
       cached_input_tokens: run.usage.cachedInputTokens,
-      cost_usd: aiCostUsd(run.model, run.usage),
+      cost_usd: run.costUsd ?? aiCostUsd(run.model, run.usage),
     });
   } catch {
     // Le journal ne doit pas faire échouer la génération.

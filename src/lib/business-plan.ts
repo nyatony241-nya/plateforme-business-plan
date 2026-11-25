@@ -8,10 +8,22 @@ const laterText = (max: number) => z.string().trim().max(max);
 
 export const CHANNELS = ["Facebook", "TikTok", "WhatsApp", "Instagram", "Bouche-à-oreille", "Affichage", "Autre"] as const;
 
-export const PHOTO_SOURCES = { pexels: "Pexels", unsplash: "Unsplash" } as const;
+export const PHOTO_SOURCES = { pexels: "Pexels", unsplash: "Unsplash", ia: "IA" } as const;
+
+/** Illustration créée par IA pour ce projet, rangée dans le stockage privé du projet. */
+export const aiPhotoSchema = z.object({
+  source: z.literal("ia"),
+  /** Chemin dans le stockage : <projet>/<fichier>. */
+  id: z.string().regex(/^[0-9a-f-]{36}\/[a-z0-9-]{1,60}\.(png|jpg|webp)$/),
+  alt: z.string().max(300),
+  /** Servie par /api/images/<projet>/<fichier>, réservée au propriétaire du projet. */
+  src: z.string().regex(/^\/api\/images\/[0-9a-f-]{36}\/[a-z0-9-]{1,60}\.(png|jpg|webp)$/),
+});
+
+export type AiPhoto = z.infer<typeof aiPhotoSchema>;
 
 /** Photo libre de droit (Unsplash ou Pexels), avec ce qu'il faut pour créditer son auteur. */
-export const planPhotoSchema = z.object({
+export const stockPhotoSchema = z.object({
   source: z.enum(["pexels", "unsplash"]).default("pexels"),
   id: z.union([z.number().int(), z.string().max(40)]),
   alt: z.string().max(300),
@@ -23,6 +35,10 @@ export const planPhotoSchema = z.object({
   downloadLocation: z.string().url().max(400).optional(),
 });
 
+export type StockPhoto = z.infer<typeof stockPhotoSchema>;
+
+/** Photo d'une section : illustration IA ou photo libre de droit. */
+export const planPhotoSchema = z.union([aiPhotoSchema, stockPhotoSchema]);
 export type PlanPhoto = z.infer<typeof planPhotoSchema>;
 
 export const PHOTO_SLOTS = ["couverture", "projet", "marche", "marketing"] as const;
@@ -45,6 +61,15 @@ export const planDocumentSchema = z.object({
     calendrier: z.array(z.object({ periode: text(40), actions: z.array(text(200)).min(1).max(5) })).max(8),
   }),
   risques: z.array(z.object({ risque: text(200), parade: text(400) })).max(6),
+  /** Analyse SWOT, rédigée avec la suite (absente des plans plus anciens). */
+  swot: z
+    .object({
+      forces: z.array(text(160)).max(4),
+      faiblesses: z.array(text(160)).max(4),
+      opportunites: z.array(text(160)).max(4),
+      menaces: z.array(text(160)).max(4),
+    })
+    .optional(),
   demarches: z.array(text(300)).max(8),
   conclusion: laterText(1200),
   /**

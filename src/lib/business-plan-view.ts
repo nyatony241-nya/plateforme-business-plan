@@ -14,7 +14,7 @@ export const SECTIONS = [
   { emoji: "📍", title: "L'emplacement" },
   { emoji: "💰", title: "Le plan financier" },
   { emoji: "📣", title: "Le marketing" },
-  { emoji: "⚠️", title: "Les risques" },
+  { emoji: "🧭", title: "Forces et risques" },
   { emoji: "🧾", title: "Les démarches" },
   { emoji: "✅", title: "Conclusion" },
 ] as const;
@@ -32,11 +32,15 @@ const CHANNEL_EMOJI: Record<string, string> = {
 /** Note sur 5 en étoiles : ★★★★☆ */
 export const stars = (note: number) => "★".repeat(note) + "☆".repeat(Math.max(0, 5 - note));
 
-/** Nom de la banque d'images d'une photo (Unsplash, Pexels). */
+/** Nom de la banque d'images d'une photo (Unsplash, Pexels), ou « IA ». */
 export const photoSourceName = (photo: PlanPhoto) => PHOTO_SOURCES[photo.source];
-/** Lien vers la banque d'images exigé dans le crédit (« Photo de X sur Unsplash »). */
+/** Lien vers la banque d'images exigé dans le crédit (« Photo de X sur Unsplash ») ; aucun pour une illustration IA. */
 export const photoSourceUrl = (photo: PlanPhoto) =>
-  photo.source === "unsplash" ? "https://unsplash.com/?utm_source=entreprendre&utm_medium=referral" : photo.pageUrl;
+  photo.source === "ia"
+    ? null
+    : photo.source === "unsplash"
+      ? "https://unsplash.com/?utm_source=entreprendre&utm_medium=referral"
+      : photo.pageUrl;
 
 export type PlanViewInput = {
   doc: PlanDocument;
@@ -91,7 +95,10 @@ export function buildPlanView({ doc, a, results, project, minimumWage, creation 
     .filter(Boolean)
     .join(" ");
 
-  const sources = [...new Set(Object.values(doc.photos ?? {}).map((ph) => photoSourceName(ph)))];
+  const sources = [
+    ...new Set(Object.values(doc.photos ?? {}).filter((ph) => ph.source !== "ia").map((ph) => photoSourceName(ph))),
+  ];
+  const aiIllustration = Object.values(doc.photos ?? {}).some((ph) => ph.source === "ia");
 
   const kpis = [
     { emoji: "💵", label: "Ventes la 1re année", value: formatXaf(r.years[0].revenue) },
@@ -163,6 +170,7 @@ export function buildPlanView({ doc, a, results, project, minimumWage, creation 
         ].filter((x): x is string => Boolean(x))
       : [],
     footer:
+      (aiIllustration ? "Illustration de couverture créée par IA pour ce projet. " : "") +
       (sources.length > 0 ? `Photos fournies par ${sources.join(" et ")}. ` : "") +
       (references.length > 0
         ? "Les loyers, salaires et tarifs s'appuient sur les repères locaux cités (annonces et presse) ; les autres chiffres sont des hypothèses proposées automatiquement puis calculées par un moteur financier. Rien ne remplace une vérification sur le terrain. Montants en francs CFA, hors taxes."

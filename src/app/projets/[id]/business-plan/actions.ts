@@ -6,7 +6,7 @@ import { computeScenarios } from "@/engine";
 import type { ProjectContext } from "@/lib/ai/generate-assumptions";
 import { generatePlanDocument, generatePlanPreview, generatePlanRest } from "@/lib/ai/generate-plan-document";
 import { DEFAULT_MODEL } from "@/lib/ai/model";
-import { usageFromError, type AiUsage } from "@/lib/ai/pricing";
+import { EMPTY_USAGE, usageFromError, type AiUsage } from "@/lib/ai/pricing";
 import { assumptionsSchema, toPlanInput } from "@/lib/assumptions";
 import { isCompleteDocument, planDocumentSchema, type PlanDocument, type PhotoSlot } from "@/lib/business-plan";
 import { recommendLegalForm } from "@/lib/creation-guide";
@@ -22,6 +22,7 @@ import {
   upsertPlanDocument,
   type Project,
 } from "@/lib/data/projects";
+import { IMAGE_COST_USD, IMAGE_MODEL, aiImagesEnabled, createAiCover } from "@/lib/images/ai-image";
 import { findPlanPhotos, reportDownload } from "@/lib/images/photos";
 import { isPlanDesignId } from "@/lib/plan-designs";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
@@ -32,8 +33,7 @@ const PURPOSE = "redaction_business_plan";
 const REST_PURPOSE = "redaction_suite";
 const DAILY_LIMIT = 10;
 
-/** Photos de l'aperçu (couverture, projet) ; les autres attendent le paiement. */
-const PREVIEW_SLOTS: PhotoSlot[] = ["couverture", "projet"];
+/** Photos de l'aperçu : couverture (illustration IA) et projet ; les autres attendent le paiement. */
 const REST_SLOTS: PhotoSlot[] = ["marche", "marketing"];
 
 const contextOf = (project: Project): ProjectContext => ({
@@ -62,6 +62,34 @@ async function photosFor(doc: PlanDocument, project: Project, slots: PhotoSlot[]
   // Unsplash demande de signaler chaque photo utilisée.
   await Promise.all(Object.values(found).map((photo) => reportDownload(photo)));
   return found;
+}
+
+/**
+ * Couverture créée par IA pour ce projet (nom du commerce visible). En cas d'échec,
+ * la couverture reste une photo libre de droit : le plan n'est jamais bloqué par l'image.
+ */
+async function aiCoverFor(projectId: string, doc: PlanDocument, project: Project) {
+  if (!aiImagesEnabled()) return null;
+  const started = Date.now();
+  const model = `google/${IMAGE_MODEL}`;
+  try {
+    const photo = await createAiCover(projectId, {
+      name: project.name,
+      sector: project.sector ?? "",
+      idea: project.idea ?? "",
+      city: project.city?.name ?? null,
+      country: project.country?.name ?? "Gabon",
+      scene: doc.photoQueries?.couverture,
+      keywords: doc.photoKeywords,
+      online: project.mode === "en_ligne",
+    });
+    await logAiRun({ projectId, purpose: "image_couverture", model, status: "succes", durationMs: Date.now() - started, usage: EMPTY_USAGE, costUsd: IMAGE_COST_USD });
+    return photo;
+  } catch (error) {
+    console.error("Illustration IA impossible", error);
+    await logAiRun({ projectId, purpose: "image_couverture", model, status: "echec", durationMs: Date.now() - started, usage: EMPTY_USAGE, costUsd: null });
+    return null;
+  }
 }
 
 async function loadInputs(projectId: string) {
@@ -103,8 +131,12 @@ export async function writeBusinessPlan(projectId: string): Promise<FormState> {
     const out = full
       ? await generatePlanDocument(contextOf(project), a, realiste)
       : await generatePlanPreview(contextOf(project), a, realiste);
-    const photos = await photosFor({ ...out.document, photos: {} }, project, full ? [...PREVIEW_SLOTS, ...REST_SLOTS] : PREVIEW_SLOTS);
-    await upsertPlanDocument(projectId, { ...out.document, photos });
+    const fresh = { ...out.document, photos: {} };
+    const others: PhotoSlot[] = full ? ["projet", ...REST_SLOTS] : ["projet"];
+    // Illustration IA et photos des sections en parallèle ; photo libre de droit si l'IA échoue.
+    const [cover, photos] = await Promise.all([aiCoverFor(projectId, fresh, project), photosFor(fresh, project, others)]);
+    const couverture = cover ?? (await photosFor({ ...fresh, photos }, project, ["couverture"])).couverture;
+    await upsertPlanDocument(projectId, { ...out.document, photos: { ...photos, ...(couverture ? { couverture } : {}) } });
     await logRun(projectId, PURPOSE, "succes", out.durationMs, out.usage);
   } catch (error) {
     console.error("Rédaction du business plan impossible", error);

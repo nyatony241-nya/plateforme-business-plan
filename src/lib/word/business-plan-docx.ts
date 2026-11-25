@@ -23,7 +23,7 @@ import {
   VerticalAlign,
   WidthType,
 } from "docx";
-import type { PhotoSlot, PlanPhoto } from "@/lib/business-plan";
+import type { AiPhoto, PhotoSlot, PlanDocument, PlanPhoto } from "@/lib/business-plan";
 import { SECTIONS, buildPlanView, paragraphs, photoSourceName, photoSourceUrl, stars, type PlanViewInput } from "@/lib/business-plan-view";
 import { brand } from "@/config/brand";
 import { reportDownload } from "@/lib/images/photos";
@@ -280,15 +280,26 @@ const IMAGE_WIDTH = 640;
 const PHOTO_HOSTS = ["https://images.unsplash.com/", "https://images.pexels.com/"];
 
 /** Télécharge les photos pour les intégrer au fichier ; une photo indisponible est omise. */
-async function loadPhotos(photos: Partial<Record<PhotoSlot, PlanPhoto>>) {
-  const loaded: Partial<Record<PhotoSlot, { photo: PlanPhoto; data: Uint8Array }>> = {};
+/** Lecture des illustrations IA (stockage privé du projet), fournie par la route Word. */
+export type AiImageLoader = (photo: AiPhoto) => Promise<{ data: Uint8Array; type: "png" | "jpg" } | null>;
+
+type LoadedPhoto = { photo: PlanPhoto; data: Uint8Array; type: "png" | "jpg" };
+
+async function loadPhotos(photos: Partial<Record<PhotoSlot, PlanPhoto>>, loadAi?: AiImageLoader) {
+  const loaded: Partial<Record<PhotoSlot, LoadedPhoto>> = {};
   await Promise.all(
     Object.entries(photos).map(async ([slot, photo]) => {
-      if (!photo || !PHOTO_HOSTS.some((host) => photo.src.startsWith(host))) return;
+      if (!photo) return;
       try {
+        if (photo.source === "ia") {
+          const image = loadAi ? await loadAi(photo) : null;
+          if (image) loaded[slot as PhotoSlot] = { photo, ...image };
+          return;
+        }
+        if (!PHOTO_HOSTS.some((host) => photo.src.startsWith(host))) return;
         const res = await fetch(photo.src, { signal: AbortSignal.timeout(8000) });
         if (!res.ok) return;
-        loaded[slot as PhotoSlot] = { photo, data: new Uint8Array(await res.arrayBuffer()) };
+        loaded[slot as PhotoSlot] = { photo, data: new Uint8Array(await res.arrayBuffer()), type: "jpg" };
         await reportDownload(photo);
       } catch {
         // Photo omise.
@@ -298,7 +309,7 @@ async function loadPhotos(photos: Partial<Record<PhotoSlot, PlanPhoto>>) {
   return loaded;
 }
 
-function photoBlock(item?: { photo: PlanPhoto; data: Uint8Array }, o: { width?: number; ratio?: number; center?: boolean; light?: boolean } = {}) {
+function photoBlock(item?: LoadedPhoto, o: { width?: number; ratio?: number; center?: boolean; light?: boolean } = {}) {
   if (!item) return [];
   const width = o.width ?? IMAGE_WIDTH;
   const ratio = o.ratio ?? 627 / 1200;
@@ -311,7 +322,7 @@ function photoBlock(item?: { photo: PlanPhoto; data: Uint8Array }, o: { width?: 
       spacing: { before: 120, after: 40 },
       children: [
         new ImageRun({
-          type: "jpg",
+          type: item.type,
           data: item.data,
           transformation: { width, height: Math.round(width * ratio) },
           altText: { name: "Photo", description: item.photo.alt || "Photo", title: "Photo" },
@@ -321,20 +332,52 @@ function photoBlock(item?: { photo: PlanPhoto; data: Uint8Array }, o: { width?: 
     new Paragraph({
       alignment,
       spacing: { after: 160 },
-      children: [
-        new TextRun({ text: "📷 Photo de ", size: 16, color: credit }),
-        new ExternalHyperlink({
-          link: item.photo.photographerUrl,
-          children: [new TextRun({ text: item.photo.photographer, size: 16, color: credit, underline: {} })],
-        }),
-        new TextRun({ text: " sur ", size: 16, color: credit }),
-        new ExternalHyperlink({
-          link: photoSourceUrl(item.photo),
-          children: [new TextRun({ text: photoSourceName(item.photo), size: 16, color: credit, underline: {} })],
-        }),
-      ],
+      children:
+        item.photo.source === "ia"
+          ? [new TextRun({ text: "✨ Illustration créée par IA pour ce projet", size: 16, color: credit })]
+          : [
+              new TextRun({ text: "📷 Photo de ", size: 16, color: credit }),
+              new ExternalHyperlink({
+                link: item.photo.photographerUrl,
+                children: [new TextRun({ text: item.photo.photographer, size: 16, color: credit, underline: {} })],
+              }),
+              new TextRun({ text: " sur ", size: 16, color: credit }),
+              new ExternalHyperlink({
+                link: photoSourceUrl(item.photo) ?? item.photo.pageUrl,
+                children: [new TextRun({ text: photoSourceName(item.photo), size: 16, color: credit, underline: {} })],
+              }),
+            ],
     }),
   ];
+}
+
+/** Analyse SWOT : tableau de 2 × 2 cases, filet de couleur en haut de chaque case. */
+function swotTable(swot: NonNullable<PlanDocument["swot"]>, t: WordTheme) {
+  const boxes = [
+    { title: "💪 Forces", color: "1F7A4D", items: swot.forces },
+    { title: "🔧 Faiblesses", color: "8F5C0E", items: swot.faiblesses },
+    { title: "🚀 Opportunités", color: t.primary, items: swot.opportunites },
+    { title: "⚡ Menaces", color: "B42318", items: swot.menaces },
+  ];
+  const half = Math.round(CONTENT / 2);
+  const cell = (b: (typeof boxes)[number]) =>
+    new TableCell({
+      width: { size: half, type: WidthType.DXA },
+      borders: { ...all(line(BorderStyle.SINGLE, 4, LINE)), top: line(BorderStyle.SINGLE, 24, b.color) },
+      margins: { top: 120, bottom: 120, left: 140, right: 140 },
+      children: [
+        new Paragraph({ spacing: { after: 80 }, children: [run(b.title, { bold: true, size: 22, color: b.color })] }),
+        ...b.items.map((item) => new Paragraph({ spacing: { after: 40 }, children: [run(`• ${item}`, { size: 19 })] })),
+      ],
+    });
+  return new Table({
+    width: { size: CONTENT, type: WidthType.DXA },
+    columnWidths: [half, CONTENT - half],
+    rows: [
+      new TableRow({ cantSplit: true, children: [cell(boxes[0]), cell(boxes[1])] }),
+      new TableRow({ cantSplit: true, children: [cell(boxes[2]), cell(boxes[3])] }),
+    ],
+  });
 }
 
 const h3 = (title: string) =>
@@ -674,10 +717,14 @@ function wordCover(t: WordTheme, v: CoverText, photos: Loaded): (Paragraph | Tab
 }
 
 /** Fichier Word du business plan, identique au contenu de la page et du PDF. */
-export async function businessPlanDocx(input: PlanViewInput, design: PlanDesign = getPlanDesign(null)): Promise<Buffer> {
+export async function businessPlanDocx(
+  input: PlanViewInput,
+  design: PlanDesign = getPlanDesign(null),
+  loadAiImage?: AiImageLoader,
+): Promise<Buffer> {
   const { doc } = input;
   const v = buildPlanView(input);
-  const photos = await loadPhotos(v.photos);
+  const photos = await loadPhotos(v.photos, loadAiImage);
   const t = wordTheme(design);
   const tbl = (rows: string[][], widths: number[], opts: { header?: boolean; numeric?: number[]; boldLast?: boolean } = {}) =>
     table(rows, widths, t, opts);
@@ -770,6 +817,7 @@ export async function businessPlanDocx(input: PlanViewInput, design: PlanDesign 
     ]),
 
     ...h2(7, t),
+    ...(doc.swot ? [swotTable(doc.swot, t), spacer(160), h3("⚠️ Principaux risques et parades")] : []),
     ...doc.risques.flatMap((x) => [p(`🔸 ${x.risque}`, { bold: true, after: 40 }), p(`✅ ${x.parade}`, { color: "3F4A45" })]),
 
     ...h2(8, t),

@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { PHOTO_SLOTS, type PhotoSlot, type PlanPhoto } from "@/lib/business-plan";
+import { PHOTO_SLOTS, type PhotoSlot, type StockPhoto as PlanPhoto, type PlanPhoto as AnyPhoto } from "@/lib/business-plan";
 
 /** Paramètre exigé par Unsplash sur les liens de crédit. */
 const UTM = "utm_source=entreprendre&utm_medium=referral";
@@ -255,7 +255,7 @@ export async function findPlanPhotos(queries: Partial<Record<PhotoSlot, string>>
 }
 
 /** Unsplash demande de signaler chaque téléchargement (ici : intégration dans le fichier Word). */
-export async function reportDownload(photo: PlanPhoto) {
+export async function reportDownload(photo: AnyPhoto) {
   const key = unsplashKey();
   if (photo.source !== "unsplash" || !photo.downloadLocation || !key) return;
   if (!photo.downloadLocation.startsWith("https://api.unsplash.com/")) return;

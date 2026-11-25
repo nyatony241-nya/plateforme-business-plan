@@ -1,13 +1,44 @@
 import type { CSSProperties, ReactNode } from "react";
 import { CashChart } from "@/components/cash-chart";
 import { SCENARIO_LABEL } from "@/engine";
-import type { PlanPhoto } from "@/lib/business-plan";
+import type { PlanDocument, PlanPhoto } from "@/lib/business-plan";
 import { SECTIONS, buildPlanView, paragraphs, stars, type PlanViewInput } from "@/lib/business-plan-view";
 import { FONT_STACK, getPlanDesign, type PlanDesign } from "@/lib/plan-designs";
 import { Cover, PatternBand, PhotoCredit, SectionHeading, photoTone } from "./design-parts";
 import { LOCKED_CONTENTS, PREVIEW_SECTIONS } from "@/lib/plan-preview";
 import { watermarkCss } from "@/lib/watermark";
 import { SCENARIO_COLOR, SCENARIO_ORDER } from "@/lib/scenario-colors";
+
+const SWOT_BOXES = [
+  { key: "forces", emoji: "💪", title: "Forces", color: "#1f7a4d" },
+  { key: "faiblesses", emoji: "🔧", title: "Faiblesses", color: "#8f5c0e" },
+  { key: "opportunites", emoji: "🚀", title: "Opportunités", color: "var(--plan-primary)" },
+  { key: "menaces", emoji: "⚡", title: "Menaces", color: "#b42318" },
+] as const;
+
+/** Analyse SWOT en quatre cases : interne (forces, faiblesses) puis externe (opportunités, menaces). */
+function Swot({ swot }: { swot: NonNullable<PlanDocument["swot"]> }) {
+  return (
+    <div className="grid gap-3 break-inside-avoid sm:grid-cols-2 print:grid-cols-2">
+      {SWOT_BOXES.map((b) => (
+        <div
+          key={b.key}
+          className="rounded-xl border border-line bg-white/70 p-4 print:p-3"
+          style={{ borderTopWidth: 4, borderTopColor: b.color }}
+        >
+          <p className="font-semibold" style={{ color: b.color }}>
+            <span aria-hidden>{b.emoji}</span> {b.title}
+          </p>
+          <ul className="mt-2 flex flex-col gap-1.5 text-sm">
+            {swot[b.key].map((item) => (
+              <li key={item}>• {item}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function Section({ n, d, children }: { n: number; d: PlanDesign; children: ReactNode }) {
   return (
@@ -362,6 +393,8 @@ export function PlanDocumentView(input: PlanViewInput & { preview?: boolean; pen
       </Section>
 
       <Section n={7} d={d}>
+        {doc.swot ? <Swot swot={doc.swot} /> : null}
+        {doc.swot ? <h3 className="font-semibold text-(--plan-primary)">⚠️ Principaux risques et parades</h3> : null}
         <ul className="flex flex-col gap-3">
           {doc.risques.map((x) => (
             <li key={x.risque} className="break-inside-avoid">

@@ -75,6 +75,14 @@ const restSchema = z.object({
       .describe("Calendrier des 90 premiers jours, en 6 périodes de 2 semaines"),
   }),
   risques: z.array(z.object({ risque: z.string(), parade: z.string() })).describe("3 à 5 risques principaux"),
+  swot: z
+    .object({
+      forces: z.array(z.string()).describe("3 forces internes du projet (savoir-faire, emplacement, offre…)"),
+      faiblesses: z.array(z.string()).describe("3 faiblesses internes honnêtes (jeune entreprise, moyens limités…)"),
+      opportunites: z.array(z.string()).describe("3 opportunités du marché local et des habitudes des clients"),
+      menaces: z.array(z.string()).describe("3 menaces extérieures (concurrence, prix d'achat, saison, réglementation…)"),
+    })
+    .describe("Analyse SWOT, des phrases courtes (15 mots au plus), sans aucun chiffre ni montant"),
   demarches: z
     .array(z.string())
     .describe("Étapes pour créer l'entreprise et ouvrir, dans l'ordre, sans frais ni délais ni téléphone"),
@@ -180,6 +188,8 @@ function previewFields(out: PreviewOutput) {
   return { resume: prose(out.resume, 1500), projet: prose(out.projet, 2000), ...photoBrief(out.photos) };
 }
 
+const swotList = (items: string[]) => items.slice(0, 4).map((x) => clean(x, 160)).filter(Boolean);
+
 /** Parties suivantes, bornées et nettoyées (notes 1 à 5, parts entières). */
 export function restFields(out: RestOutput) {
   return {
@@ -209,6 +219,12 @@ export function restFields(out: RestOutput) {
       })),
     },
     risques: out.risques.slice(0, 6).map((r) => ({ risque: clean(r.risque, 200), parade: clean(r.parade, 400) })),
+    swot: {
+      forces: swotList(out.swot.forces),
+      faiblesses: swotList(out.swot.faiblesses),
+      opportunites: swotList(out.swot.opportunites),
+      menaces: swotList(out.swot.menaces),
+    },
     demarches: out.demarches.slice(0, 8).map((d) => clean(d, 300)).filter(Boolean),
     conclusion: prose(out.conclusion, 1200),
   };
@@ -247,7 +263,7 @@ export async function generatePlanPreview(ctx: ProjectContext, a: Assumptions, r
   return { document, durationMs: Date.now() - started, usage };
 }
 
-/** Rédige la suite d'un aperçu (marché, emplacement, marketing, risques, démarches, conclusion). */
+/** Rédige la suite d'un aperçu (marché, emplacement, marketing, risques, SWOT, démarches, conclusion). */
 export async function generatePlanRest(
   ctx: ProjectContext,
   a: Assumptions,
@@ -265,7 +281,7 @@ export async function generatePlanRest(
       `Résumé : ${preview.resume}`,
       `Le projet : ${preview.projet}`,
       "",
-      "Rédige maintenant le marché, l'emplacement, le marketing, les risques, les démarches et la conclusion.",
+      "Rédige maintenant le marché, l'emplacement, le marketing, les risques, l'analyse SWOT, les démarches et la conclusion.",
     ].join("\n"),
     model,
     100_000,
@@ -280,7 +296,7 @@ export async function generatePlanDocument(ctx: ProjectContext, a: Assumptions, 
     callAi(previewSchema, `${buildDocumentPrompt(ctx, a, realiste)}\nRédige seulement le résumé, la présentation du projet et les recherches de photos.`, model, 60_000),
     callAi(
       restSchema,
-      `${buildDocumentPrompt(ctx, a, realiste)}\nRédige le marché, l'emplacement, le marketing, les risques, les démarches et la conclusion.`,
+      `${buildDocumentPrompt(ctx, a, realiste)}\nRédige le marché, l'emplacement, le marketing, les risques, l'analyse SWOT, les démarches et la conclusion.`,
       model,
       100_000,
     ),

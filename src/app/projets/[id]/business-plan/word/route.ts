@@ -8,6 +8,7 @@ import { isPlanUnlocked } from "@/lib/data/credits";
 import { creationAgencyOf, getAssumptions, getMyProject, getPlanDocument } from "@/lib/data/projects";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { getPlanDesign } from "@/lib/plan-designs";
+import { readAiImage } from "@/lib/images/ai-image";
 import { businessPlanDocx } from "@/lib/word/business-plan-docx";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -68,7 +69,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/projets/[id]/bu
     },
     minimumWage: country.provenance.find((p) => p.code === "revenu_minimum_mensuel")?.value ?? 150_000,
     creation,
-  }, getPlanDesign(project.plan_design));
+  }, getPlanDesign(project.plan_design), readAiImage);
 
   return new Response(new Uint8Array(buffer), {
     headers: {

@@ -343,8 +343,8 @@ export default async function HomePage() {
               <Eyebrow>Le document</Eyebrow>
               <Title before="Votre" highlight="plan" after=" contient" />
               <p className="mt-4 leading-relaxed text-ink-soft">
-                Neuf parties rédigées, illustrées de photos adaptées à votre activité, dans le design de votre choix
-                parmi {PLAN_DESIGNS.length}.
+                Neuf parties rédigées, une couverture illustrée par IA à l&apos;image de votre commerce, une analyse
+                SWOT, dans le design de votre choix parmi {PLAN_DESIGNS.length}.
               </p>
               <ol className="mt-8 grid grid-cols-2 gap-2.5 sm:grid-cols-5">
                 {SECTIONS.map((s, i) => (

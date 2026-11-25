@@ -136,7 +136,7 @@ export const FUNNEL_STEPS = [
   { letter: "B", title: "L'assistant comprend le projet", text: "Activité, clients, quartier, budget : il ne demande que l'essentiel." },
   { letter: "C", title: "Des chiffres de votre ville", text: "Loyers, salaires, électricité relevés localement, avec leur source." },
   { letter: "D", title: "Des calculs fiables", text: "Un moteur financier calcule tout : impôts de votre pays, trésorerie, 3 scénarios." },
-  { letter: "E", title: "Un plan rédigé et illustré", text: "9 parties, photos adaptées à votre activité, prêt à imprimer." },
+  { letter: "E", title: "Un plan rédigé et illustré", text: "9 parties, couverture illustrée par IA à votre nom, prêt à imprimer." },
   { letter: "F", title: "Les démarches officielles", text: "Forme juridique, étapes et organisme officiel de votre pays." },
 ] as const;
 

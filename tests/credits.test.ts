@@ -10,7 +10,13 @@ describe("aperçu gratuit", () => {
     expect(p.resume).toBe(SAMPLE_DOC.resume);
     expect(p.projet).toBe(SAMPLE_DOC.projet);
     const hidden = JSON.stringify({ ...p, resume: "", projet: "" });
-    for (const secret of [SAMPLE_DOC.marche.clientele, SAMPLE_DOC.conclusion, SAMPLE_DOC.risques[0].parade]) {
+    for (const secret of [
+      SAMPLE_DOC.marche.clientele,
+      SAMPLE_DOC.conclusion,
+      SAMPLE_DOC.risques[0].parade,
+      SAMPLE_DOC.swot!.forces[0],
+      SAMPLE_DOC.swot!.menaces[0],
+    ]) {
       expect(hidden).not.toContain(secret);
     }
     expect(p.marketing.calendrier).toHaveLength(0);
@@ -65,10 +71,13 @@ describe("aperçu rédigé à moitié", () => {
       emplacement: { analyse: "d", criteres: [{ critere: "Passage", note: 9, commentaire: "x" }] },
       marketing: { message: "m", canaux: [{ canal: SAMPLE_DOC.marketing.canaux[0].canal, action: "y", part: 33.6 }], calendrier: [] },
       risques: [{ risque: "r", parade: "p" }],
+      swot: { forces: ["f1", "  ", "f2", "f3", "f4", "f5"], faiblesses: ["w"], opportunites: ["o"], menaces: ["x".repeat(300)] },
       demarches: ["s"],
       conclusion: "fin",
     });
     expect(rest.emplacement.criteres[0].note).toBe(5);
     expect(rest.marketing.canaux[0].part).toBe(34);
+    expect(rest.swot.forces).toEqual(["f1", "f2", "f3"]);
+    expect(rest.swot.menaces[0].length).toBeLessThanOrEqual(160);
   });
 });

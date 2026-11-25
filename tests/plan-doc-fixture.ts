@@ -14,6 +14,12 @@ export const SAMPLE_DOC: PlanDocument = {
     calendrier: [{ periode: "Semaines 1 et 2", actions: ["Aménagement"] }],
   },
   risques: [{ risque: "Rupture de stock", parade: "Suivi des ventes." }],
+  swot: {
+    forces: ["Savoir-faire de la fondatrice", "Emplacement passant"],
+    faiblesses: ["Jeune entreprise sans clientèle"],
+    opportunites: ["Clients qui commandent sur WhatsApp"],
+    menaces: ["Hausse du prix des tissus importés"],
+  },
   demarches: ["Bail commercial", "Immatriculation auprès de l'ANPI-Gabon"],
   conclusion: "Projet sobre et prudent.",
   generation: { model: "test", generatedAt: "2026-11-21T16:00:00.000Z" },

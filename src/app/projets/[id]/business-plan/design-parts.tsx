@@ -32,14 +32,16 @@ export function PatternBand({ design, className = "" }: { design: PlanDesign; cl
 }
 
 export function PhotoCredit({ photo, light = false }: { photo: PlanPhoto; light?: boolean }) {
+  const tone = light ? "text-white/85" : "text-muted";
+  if (photo.source === "ia") return <span className={tone}>✨ Illustration créée par IA pour ce projet</span>;
   return (
-    <span className={light ? "text-white/85" : "text-muted"}>
+    <span className={tone}>
       📷 Photo de{" "}
       <a href={photo.photographerUrl} className="underline underline-offset-2">
         {photo.photographer}
       </a>{" "}
       sur{" "}
-      <a href={photoSourceUrl(photo)} className="underline underline-offset-2">
+      <a href={photoSourceUrl(photo) ?? undefined} className="underline underline-offset-2">
         {photoSourceName(photo)}
       </a>
     </span>
