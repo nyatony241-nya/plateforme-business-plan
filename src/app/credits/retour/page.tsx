@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: "Paiement" };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Retour de la page de paiement : la session est relue chez SasPay avant tout crédit. */
+/** Retour de la page de paiement : le dépôt est relu chez pawaPay avant tout crédit. */
 export default async function PaymentReturnPage({ searchParams }: PageProps<"/credits/retour">) {
   if (!isSupabaseConfigured) {
     return (
@@ -40,7 +40,7 @@ export default async function PaymentReturnPage({ searchParams }: PageProps<"/cr
   if (!payment) redirect("/credits");
 
   let outcome = payment.status === "paye" ? "paid" : payment.status === "echoue" ? "failed" : "pending";
-  if (outcome === "pending" && payment.provider === "saspay") {
+  if (outcome === "pending" && payment.provider === "pawapay") {
     outcome = await settlePayment(payment.id).catch(() => "pending" as const);
   }
   const paid = outcome === "paid";
@@ -70,8 +70,8 @@ export default async function PaymentReturnPage({ searchParams }: PageProps<"/cr
           <>
             <h1 className="font-display text-3xl font-semibold text-ink">❌ Paiement non abouti</h1>
             <p className="text-ink-soft">
-              Le paiement n&apos;a pas été validé ou la page de paiement a expiré. Réessayez. Si votre compte a quand
-              même été débité, contactez-nous.
+              Le paiement n&apos;a pas été validé. Vérifiez le solde de votre compte mobile money, puis réessayez. Si votre
+              compte a quand même été débité, contactez-nous.
             </p>
             <ButtonLink href={`/credits${projectId ? `?projet=${projectId}` : ""}`} className="self-start">
               Réessayer
@@ -81,8 +81,8 @@ export default async function PaymentReturnPage({ searchParams }: PageProps<"/cr
           <>
             <h1 className="font-display text-3xl font-semibold text-ink">⏳ Paiement en cours de confirmation</h1>
             <p className="text-ink-soft">
-              Validez le paiement sur votre téléphone ou auprès de votre banque si ce n&apos;est pas déjà fait. La
-              confirmation arrive en général en moins d&apos;une minute.
+              Validez le paiement sur votre téléphone si ce n&apos;est pas déjà fait. La confirmation arrive en général en
+              moins d&apos;une minute.
             </p>
             <ButtonLink href={`/credits/retour?paiement=${paymentId}${projectId ? `&projet=${projectId}` : ""}`} className="self-start">
               Actualiser

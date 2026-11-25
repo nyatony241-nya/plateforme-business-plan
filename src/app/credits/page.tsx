@@ -6,8 +6,7 @@ import { ConfigNotice } from "@/components/config-notice";
 import { isSupabaseConfigured } from "@/lib/env";
 import { getCreditBalance, getCreditPacks, getRecentLedger } from "@/lib/data/credits";
 import { getMyProject } from "@/lib/data/projects";
-import { settlePendingPayments } from "@/lib/payments/confirm";
-import { saspayConfigured } from "@/lib/payments/saspay";
+import { pawapayConfigured } from "@/lib/payments/pawapay";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { BuyForm } from "./buy-form";
@@ -39,16 +38,13 @@ export default async function CreditsPage({ searchParams }: PageProps<"/credits"
   const query = await searchParams;
   const projectId = typeof query.projet === "string" && UUID.test(query.projet) ? query.projet : undefined;
 
-  // Un paiement validé sans retour sur le site est crédité ici.
-  if (saspayConfigured()) await settlePendingPayments(user.id).catch(() => undefined);
-
   const [balance, packs, ledger, project] = await Promise.all([
     getCreditBalance(),
     getCreditPacks(),
     getRecentLedger(),
     projectId ? getMyProject(projectId) : Promise.resolve(null),
   ]);
-  const open = saspayConfigured() && createAdminClient() !== null;
+  const open = pawapayConfigured() && createAdminClient() !== null;
   const fullName = ((user.user_metadata?.full_name as string | undefined) ?? "").trim();
 
   return (
